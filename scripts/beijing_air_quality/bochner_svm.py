@@ -331,7 +331,7 @@ def main(
     # Keep best model around
     best_val_iteration = 0
     best_val_mse = np.inf
-
+    torch.backends.cudnn.benchmark = True
     for iteration in tqdm(range(num_iterations), desc="training"):
         validate = True if iteration % meta_val_every == 0 else False
 
