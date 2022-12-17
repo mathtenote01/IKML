@@ -36,7 +36,81 @@ class RidgeRegression(nn.Module):
     def predict(self, X):
         return torch.matmul(self.kernel(X, self.X_tr), self.alphas)
 
+class SupportVectorMachine(nn.Module):
+    def __init__(self, lam, kernel, device=None):
+        super(SupportVectorMachine, self).__init__()
+        self.lam = torch.tensor(lam)
+        self.kernel = kernel
+        self.alphas = None
+        self.X_tr = None
+        if device is None:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        else:
+            self.device = device
 
+    def fit(self, X, Y):
+        eps = 0.001
+        C = 10
+        if len(X.size()) == 3:
+            b, n, d = X.size()
+            b, m, l = Y.size()
+        elif len(X.size()) == 2:
+            n, d = X.size()
+            m, l = Y.size()
+            
+            
+        assert (
+            n == m
+        ), "Tensors need to have same dimension, dimensions are {} and {}".format(n, m)
+        
+        # NOTE kernel(X, X) = cos(X^{T}omega) x cos(X^{T}omega)
+        # NOTE omegaは, ラテントを関数でpush forwardしたもの
+        # TODO Kは行列ではないので, 二次計画問題にすることはできない
+        # self.K = self.kernel(X, X)
+        self.K = self.kernel(X, X)
+        self.K = self.K.to('cpu').detach().numpy().copy()
+        X = X.to('cpu').detach().numpy().copy()
+        Y = Y.to('cpu').detach().numpy().copy()
+        
+        def min_func_var(alphas):
+            S = 0
+            for i in range(n):
+                for j in range(n):
+                    S = S + 0.5 * (alphas[i] - alphas[i + n]) * (alphas[j] - alphas[j + n]) * self.K[0, i, j]
+                    if i == j:
+                        S += torch.exp(self.lam)
+                S = S + torch.exp(self.lam) * (alphas[i] + alphas[i + n])
+                S = S - (alphas[i] - alphas[i + n]) * Y[i]
+            return S
+        cur_alphas = [1 for _ in range(2 * n)]
+        bnds = [(0, C) for _ in range(2 * n)]
+        opts = sco.minimize(fun=min_func_var, x0=cur_alphas, method='SLSQP', bounds=bnds)
+        self.alphas = torch.from_numpy(opts['x']).clone()
+        self.K = torch.from_numpy(self.K).clone()
+        self.X_tr = torch.from_numpy(X).clone()
+        self.Y_tr = torch.from_numpy(Y).clone()
+        self.alphas = self.alphas.to(self.device)
+        self.K = self.K.to(self.device)
+        self.X_tr= self.X_tr.to(self.device)
+        self.Y_tr = self.Y_tr.to(self.device)
+
+    def predict(self, X):
+        # self.last_alpha = torch.tensor(self.alphas["alpha"]) - torch.tensor(self.alphas["alpha_tilde"])
+        # return torch.matmul(self.kernel(X, self.X_tr), self.last_alpha)
+        result = 0
+        b_array = [self.Y_tr[i] - self.lam for i in range(torch.tensor(self.X_tr).size()[0])]
+        b_mean = 0
+        n = torch.tensor(self.X_tr).size()[0]
+        for i in range(n):
+            for j in range(n):
+                # b_array[i] -= (self.alphas[j] - self.alphas[j + n]) * self.kernel(self.X_tr[j], self.X_tr[i])
+                b_array[i] -= (self.alphas[j] - self.alphas[j + n]) * self.K[0, i, j]
+            b_mean += b_array[i] / torch.tensor(self.X_tr).size()[0]
+        
+        for i in range(torch.tensor(self.X_tr).size()[0]):
+            result += (self.alphas[i] - self.alphas[i + n]) * self.kernel(X, self.X_tr[i])
+            
+        return result + b_mean
 class LearnedBiasRidgeRegression(nn.Module):
     def __init__(self, d, log_lam, device=None):
         super(LearnedBiasRidgeRegression, self).__init__()
