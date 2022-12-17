@@ -8,7 +8,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import scipy.optimize as sco
+import cupyx.scipy.optimize as sco
+# import scipy.optimize as sco
 from tqdm import tqdm 
 from implicit_kernel_meta_learning.algorithms import SupportVectorMachine
 # import cvxopt
