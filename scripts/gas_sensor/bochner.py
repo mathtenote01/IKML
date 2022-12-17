@@ -204,7 +204,7 @@ def main(
     sample = kernel.omegas.cpu().detach().numpy()
     with open("omegas-init.npy", "wb") as f:
         np.save(f, sample)
-
+    torch.backends.cudnn.benchmark = True
     for iteration in range(num_iterations):
         validate = True if iteration % meta_val_every == 0 else False
 
