@@ -177,6 +177,28 @@
         D: 20000
         lam: 0.001
         meta_lr: 0.0001
+    bochner_ikml_svm:
+      description: "Bochner IKML"
+      main: "scripts/beijing_air_quality/bochner_svm"
+      output-scalars: '(\key): (\value)'
+      sourcecode: "scripts/beijing_air_quality"
+      flags-dest: args
+      flags:
+        seed: 42
+        k_support: 25
+        k_query: 25
+        num_iterations: 10000
+        meta_batch_size: 4
+        meta_val_batch_size: 1000
+        meta_val_every: 250
+        holdout_size: 3000
+        num_layers: 3
+        hidden_dim: 64
+        nonlinearity: relu
+        latent_d: 64
+        D: 20000
+        lam: 0.001
+        meta_lr: 0.0001
 
 - model: gas_sensor
   description: "Forecasting gas concentration"
@@ -291,6 +313,28 @@
     bochner_ikml:
       description: "Bochner IKML"
       main: "scripts/gas_sensor/bochner"
+      output-scalars: '(\key): (\value)'
+      sourcecode: "scripts/gas_sensor"
+      flags-dest: args
+      flags:
+        seed: 42
+        k_support: 20
+        k_query: 20
+        num_iterations: 30000
+        meta_batch_size: 4
+        meta_val_batch_size: 1000
+        meta_val_every: 250
+        holdout_size: 3000
+        num_layers: 2
+        hidden_dim: 64
+        nonlinearity: relu
+        latent_d: 64
+        D: 20000
+        lam: 0.001
+        meta_lr: 0.00001
+    bochner_ikml_svm:
+      description: "Bochner IKML"
+      main: "scripts/gas_sensor/bochner_svm"
       output-scalars: '(\key): (\value)'
       sourcecode: "scripts/gas_sensor"
       flags-dest: args
