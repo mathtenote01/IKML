@@ -279,7 +279,7 @@ def main(
         #     evaluation_error.backward()
         #     meta_train_error += evaluation_error.item()
         future_list = []
-        with futures.ThreadPoolExecutor() as executor:
+        with futures.ThreadPoolExecutor(max_workers=meta_batch_size) as executor:
             for train_batch in train_batches:
                 # タスクを追加する。
                 executor.submit(_fast_adapt_boch_train, train_batch, model, loss, D, device)
@@ -300,7 +300,7 @@ def main(
             #     )
             #     meta_valid_error += evaluation_error.item()
             future_list = []
-            with futures.ThreadPoolExecutor() as executor:
+            with futures.ThreadPoolExecutor(max_workers=meta_val_batch_size) as executor:
                 for val_batch in val_batches:
                     # タスクを追加する。
                     executor.submit(_fast_adapt_boch_valid, val_batch, model, loss, D, device)
