@@ -287,8 +287,6 @@ def main(
         # for future in futures:
         #     future.result.backward()
         #     meta_train_error += future.result.item()
-                
-        print("meta_train_error = {}".format(meta_train_error))
         if validate:
             val_batches = [valdata.sample() for _ in range(meta_val_batch_size)]
             # for val_batch in val_batches:
