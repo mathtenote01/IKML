@@ -2,7 +2,7 @@ import argparse
 import pickle as pkl
 import warnings
 from collections import OrderedDict
-
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -12,7 +12,7 @@ from implicit_kernel_meta_learning.algorithms import RidgeRegression
 from implicit_kernel_meta_learning.data_utils import GasSensorDataLoader
 from implicit_kernel_meta_learning.experiment_utils import set_seed
 from implicit_kernel_meta_learning.kernels import BochnerKernel
-
+from concurrent import futures
 warnings.filterwarnings("ignore")
 
 
@@ -192,6 +192,7 @@ def main(
     kernel = BochnerKernel(latent_d, latent_dist, pf_map, device=device)
     model = RidgeRegression(np.log(lam), kernel).to(device)
     opt = optim.Adam(model.parameters(), meta_lr)
+    print("parameters are {}".format(model.parameters()))
 
     loss = nn.MSELoss("mean")
 
@@ -204,35 +205,79 @@ def main(
     sample = kernel.omegas.cpu().detach().numpy()
     with open("omegas-init.npy", "wb") as f:
         np.save(f, sample)
-    torch.backends.cudnn.benchmark = True
-    for iteration in range(num_iterations):
-        validate = True if iteration % meta_val_every == 0 else False
 
+    for iteration in tqdm(range(num_iterations), desc="training"):
+        validate = True if iteration % meta_val_every == 0 else False
+        # NOTE traindata.sample()
+        # NOTE {"train": train_data, "valid": valid_data, "full": full_data}
         train_batches = [traindata.sample() for _ in range(meta_batch_size)]
         opt.zero_grad()
         meta_train_error = 0.0
         meta_valid_error = 0.0
-        for train_batch in train_batches:
-            evaluation_error = fast_adapt_boch(
-                batch=train_batch,
-                model=model,
-                loss=loss,
-                D=D,
-                device=device,
-            )
-            evaluation_error.backward()
-            meta_train_error += evaluation_error.item()
+        def _fast_adapt_boch_train(batch, model, loss, D, device):
+            nonlocal meta_train_error
+            # Unpack data
+            X_tr, y_tr = batch["train"]
+            X_tr = X_tr.to(device).float()
+            y_tr = y_tr.to(device).float()
+            X_val, y_val = batch["valid"]
+            X_val = X_val.to(device).float()
+            y_val = y_val.to(device).float()
+            # adapt algorithm
+            model.kernel.sample_features(D)
+            model.fit(X_tr, y_tr)
+            # Predict
+            y_hat = model.predict(X_val)
+            cur = loss(y_val, y_hat)
+            cur.backward()
+            meta_train_error += cur.item()
+        
+        def _fast_adapt_boch_valid(batch, model, loss, D, device):
+            nonlocal meta_valid_error
+            # Unpack data
+            X_tr, y_tr = batch["train"]
+            X_tr = X_tr.to(device).float()
+            y_tr = y_tr.to(device).float()
+            X_val, y_val = batch["valid"]
+            X_val = X_val.to(device).float()
+            y_val = y_val.to(device).float()
+            # adapt algorithm
+            model.kernel.sample_features(D)
+            model.fit(X_tr, y_tr)
+            # Predict
+            y_hat = model.predict(X_val)
+            cur = loss(y_val, y_hat)
+            cur.backward()
+            meta_valid_error += cur.item()
+        # for train_batch in train_batches:
+            # evaluation_error = fast_adapt_boch(
+            #     batch=train_batch,
+            #     model=model,
+            #     loss=loss,
+            #     D=D,
+            #     device=device,
+            # )
+            # evaluation_error.backward()
+            # meta_train_error += evaluation_error.item()
+        with futures.ThreadPoolExecutor() as executor:
+            for train_batch in train_batches:
+                # タスクを追加する。
+                executor.submit(_fast_adapt_boch_train, train_batch, model, loss, D, device)
         if validate:
             val_batches = [valdata.sample() for _ in range(meta_val_batch_size)]
-            for val_batch in val_batches:
-                evaluation_error = fast_adapt_boch(
-                    batch=val_batch,
-                    model=model,
-                    loss=loss,
-                    D=D,
-                    device=device,
-                )
-                meta_valid_error += evaluation_error.item()
+            # for val_batch in val_batches:
+            #     evaluation_error = fast_adapt_boch(
+            #         batch=val_batch,
+            #         model=model,
+            #         loss=loss,
+            #         D=D,
+            #         device=device,
+            #     )
+            #     meta_valid_error += evaluation_error.item()
+            with futures.ThreadPoolExecutor() as executor:
+                for val_batch in val_batches:
+                    # タスクを追加する。
+                    executor.submit(_fast_adapt_boch_valid, val_batch, model, loss, D, device)
             meta_valid_error /= meta_val_batch_size
             result["meta_valid_error"].append(meta_valid_error)
             print("Iteration {}".format(iteration))
@@ -261,7 +306,7 @@ def main(
 
     meta_valid_error = 0.0
     meta_test_error = 0.0
-    for (valid_batch, test_batch) in zip(valid_batches, test_batches):
+    for (valid_batch, test_batch) in tqdm(zip(valid_batches, test_batches), desc="validation, test"):
         evaluation_error = fast_adapt_boch(
             batch=valid_batch,
             model=model,
