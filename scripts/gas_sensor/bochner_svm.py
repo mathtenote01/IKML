@@ -13,8 +13,7 @@ from implicit_kernel_meta_learning.algorithms import SupportVectorMachine
 from implicit_kernel_meta_learning.data_utils import GasSensorDataLoader
 from implicit_kernel_meta_learning.experiment_utils import set_seed
 from implicit_kernel_meta_learning.kernels import BochnerKernel
-# import cupyx.scipy.optimize as sco
-import scipy.optimize as sco
+from concurrent import futures
 warnings.filterwarnings("ignore")
 
 
@@ -219,27 +218,51 @@ def main(
         opt.zero_grad()
         meta_train_error = 0.0
         meta_valid_error = 0.0
-        for train_batch in train_batches:
-            evaluation_error = fast_adapt_boch(
-                batch=train_batch,
-                model=model,
-                loss=loss,
-                D=D,
-                device=device,
-            )
-            evaluation_error.backward()
-            meta_train_error += evaluation_error.item()
+        def _fast_adapt_boch_train(batch, model, loss, D, device):
+            nonlocal meta_train_error
+            # Unpack data
+            X_tr, y_tr = batch["train"]
+            X_tr = X_tr.to(device).float()
+            y_tr = y_tr.to(device).float()
+            X_val, y_val = batch["valid"]
+            X_val = X_val.to(device).float()
+            y_val = y_val.to(device).float()
+            # adapt algorithm
+            model.kernel.sample_features(D)
+            model.fit(X_tr, y_tr)
+            # Predict
+            y_hat = model.predict(X_val)
+            cur = loss(y_val, y_hat)
+            cur.backward()
+            meta_train_error += cur.item()
+        
+        def _fast_adapt_boch_valid(batch, model, loss, D, device):
+            nonlocal meta_valid_error
+            # Unpack data
+            X_tr, y_tr = batch["train"]
+            X_tr = X_tr.to(device).float()
+            y_tr = y_tr.to(device).float()
+            X_val, y_val = batch["valid"]
+            X_val = X_val.to(device).float()
+            y_val = y_val.to(device).float()
+            # adapt algorithm
+            model.kernel.sample_features(D)
+            model.fit(X_tr, y_tr)
+            # Predict
+            y_hat = model.predict(X_val)
+            cur = loss(y_val, y_hat)
+            cur.backward()
+            meta_valid_error += cur.item()
+        with futures.ThreadPoolExecutor() as executor:
+            for train_batch in train_batches:
+                # タスクを追加する。
+                executor.submit(_fast_adapt_boch_train, train_batch, model, loss, D, device)
         if validate:
             val_batches = [valdata.sample() for _ in range(meta_val_batch_size)]
-            for val_batch in val_batches:
-                evaluation_error = fast_adapt_boch(
-                    batch=val_batch,
-                    model=model,
-                    loss=loss,
-                    D=D,
-                    device=device,
-                )
-                meta_valid_error += evaluation_error.item()
+            with futures.ThreadPoolExecutor() as executor:
+                for val_batch in val_batches:
+                    # タスクを追加する。
+                    executor.submit(_fast_adapt_boch_valid, val_batch, model, loss, D, device)
             meta_valid_error /= meta_val_batch_size
             result["meta_valid_error"].append(meta_valid_error)
             print("Iteration {}".format(iteration))
