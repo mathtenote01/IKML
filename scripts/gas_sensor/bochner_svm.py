@@ -253,13 +253,13 @@ def main(
             cur = loss(y_val, y_hat)
             cur.backward()
             meta_valid_error += cur.item()
-        with futures.ThreadPoolExecutor() as executor:
+        with futures.ThreadPoolExecutor(max_workers=meta_batch_size) as executor:
             for train_batch in train_batches:
                 # タスクを追加する。
                 executor.submit(_fast_adapt_boch_train, train_batch, model, loss, D, device)
         if validate:
             val_batches = [valdata.sample() for _ in range(meta_val_batch_size)]
-            with futures.ThreadPoolExecutor() as executor:
+            with futures.ThreadPoolExecutor(max_workers=meta_val_batch_size) as executor:
                 for val_batch in val_batches:
                     # タスクを追加する。
                     executor.submit(_fast_adapt_boch_valid, val_batch, model, loss, D, device)
