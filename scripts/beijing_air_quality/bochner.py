@@ -247,8 +247,7 @@ def main(
             cur = loss(y_val, y_hat)
             cur.backward()
             meta_train_error += cur.item()
-            print("a")
-            print("train_error is {}".format(meta_train_error))
+            
         
         def _fast_adapt_boch_valid(batch, model, loss, D, device):
             nonlocal meta_valid_error
@@ -267,8 +266,8 @@ def main(
             cur = loss(y_val, y_hat)
             cur.backward()
             meta_valid_error += cur.item()
-            time.sleep(5)
-            print("train_error is {}".format(meta_valid_error))
+            
+            
         # for train_batch in train_batches:
         #     evaluation_error = fast_adapt_boch(
         #         batch=train_batch,
