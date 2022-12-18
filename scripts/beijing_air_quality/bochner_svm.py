@@ -5,11 +5,9 @@ from collections import OrderedDict
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-import cupy as cp
 import torch
 import torch.nn as nn
 import torch.optim as optim
-# import cupyx.scipy.optimize as sco
 import scipy.optimize as sco
 from tqdm import tqdm 
 from implicit_kernel_meta_learning.algorithms import SupportVectorMachine
@@ -18,6 +16,7 @@ from implicit_kernel_meta_learning.algorithms import SupportVectorMachine
 from implicit_kernel_meta_learning.data_utils import AirQualityDataLoader
 from implicit_kernel_meta_learning.experiment_utils import set_seed
 from implicit_kernel_meta_learning.kernels import BochnerKernel
+from concurrent import futures
 
 warnings.filterwarnings("ignore")
 class SupportVectorMachine(nn.Module):
@@ -86,10 +85,6 @@ class SupportVectorMachine(nn.Module):
         self.K = torch.from_numpy(self.K).clone()
         self.X_tr = torch.from_numpy(X).clone()
         self.Y_tr = torch.from_numpy(Y).clone()
-        self.alphas = self.alphas.to(self.device)
-        self.K = self.K.to(self.device)
-        self.X_tr= self.X_tr.to(self.device)
-        self.Y_tr = self.Y_tr.to(self.device)
 
     def predict(self, X):
         # self.last_alpha = torch.tensor(self.alphas["alpha"]) - torch.tensor(self.alphas["alpha_tilde"])
@@ -110,7 +105,107 @@ class SupportVectorMachine(nn.Module):
         return result + b_mean
 
 
+# class SupportVectorMachine(nn.Module):
+#     def __init__(self, lam, kernel, device=None):
+#         super(SupportVectorMachine, self).__init__()
+#         self.lam = lam
+#         self.kernel = kernel
+#         self.alphas = None
+#         self.X_tr = None
+#         if device is None:
+#             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#         else:
+#             self.device = device
 
+#     def fit(self, X, Y):
+#         eps = 0.001
+#         # P = torch.zeros((n, n))
+#         C = 1
+#         if len(X.size()) == 3:
+#             b, n, d = X.size()
+#             b, m, l = Y.size()
+#             w_1 = np.random.multivariate_normal(0, 1, size=b)
+#             w_1 = torch.from_numpy(w_1.astype(np.float32)).clone()
+#             w_2 = np.random.multivariate_normal(0, 1, size=d)
+#             w_2 = torch.from_numpy(w_2.astype(np.float32)).clone()
+            
+#             w = [w_1, w_2]
+#             # NOTE w[i]の訓練
+#             for i in range(len(X.size())):
+#                 for j in range(len(X.size())):
+#                     beta = 1
+#                     if j is not i:
+#                         x = torch.matmul(X, w[j])
+#                         beta = torch.norm(w[j]) * beta      
+#             self.cur_alphas = [pulp.LpVariable(f'cur_alphas_{i}', 
+#                     lowBound = 0, # 下限値。デフォルト値はNone
+#                     upBound=None, # 上限値。デフォルト値はNone
+#                     cat=pulp.LpContinuous
+#                          # 変数の種類。デフォルトは"Continuous"(連続値)
+#                          # 他には pulp.LpInteger 整数、pulp.LpBinary バイナリ値
+#                     ) for i in range(n)]
+#             self.cur_alphas_tilde = [pulp.LpVariable(f'cur_alphas_tilde_{i}', 
+#                     lowBound = 0, # 下限値。デフォルト値はNone
+#                     upBound=None, # 上限値。デフォルト値はNone
+#                     cat=pulp.LpContinuous
+#                     ) for i in range(n)]
+#             prob = pulp.LpProblem('sample', # 問題の名称
+#                       pulp.LpMinimize)
+#         elif len(X.size()) == 2:
+#             n, d = X.size()
+#             m, l = Y.size()
+#             self.cur_alphas = [pulp.LpVariable(f'cur_alphas_{i}', 
+#                     lowBound = 0, # 下限値。デフォルト値はNone
+#                     upBound=None, # 上限値。デフォルト値はNone
+#                     cat=pulp.LpContinuous
+#                          # 変数の種類。デフォルトは"Continuous"(連続値)
+#                          # 他には pulp.LpInteger 整数、pulp.LpBinary バイナリ値
+#                     ) for i in range(n)]
+#             self.cur_alphas_tilde = [pulp.LpVariable(f'cur_alphas_tilde_{i}', 
+#                     lowBound = 0, # 下限値。デフォルト値はNone
+#                     upBound=None, # 上限値。デフォルト値はNone
+#                     cat=pulp.LpContinuous
+#                     ) for i in range(n)]
+#             prob = pulp.LpProblem('sample', # 問題の名称
+#                       pulp.LpMaximize)
+#             for i in range(n):
+#                 for j in range(n):
+#                     prob += -0.5 * (self.cur_alphas[i] - self.cur_alphas_tilde[i]) * (self.cur_alphas[j] - self.cur_alphas_tilde[j]) * self.kernel(X[i], X[j])
+#                 prob -= self.lam(self.cur_alphas[i] + self.cur_alphas_tilde[i])
+#                 prob += Y[i] * (self.cur_alphas[i] - self.cur_alphas_tilde[i])
+#                 prob += 0 < self.cur_alphas[i]
+#                 prob += self.cur_alphas[i] < C
+#                 prob += 0 < self.cur_alphas_tilde[i]
+#                 prob += self.cur_alphas_tilde[i] < C
+#             status = prob.solve()
+#         assert (
+#             n == m
+#         ), "Tensors need to have same dimension, dimensions are {} and {}".format(n, m)
+        
+#         # NOTE kernel(X, X) = cos(X^{T}omega) x cos(X^{T}omega)
+#         # NOTE omegaは, ラテントを関数でpush forwardしたもの
+#         # TODO Kは行列ではないので, 二次計画問題にすることはできない
+#         self.K = self.kernel(X, X)
+#         self.X_tr = X
+#         self.Y_tr = Y
+
+#     def predict(self, X):
+#         # self.last_alpha = torch.tensor(self.alphas["alpha"]) - torch.tensor(self.alphas["alpha_tilde"])
+#         # return torch.matmul(self.kernel(X, self.X_tr), self.last_alpha)
+#         result = 0
+#         b_array = [self.Y_tr[i] - self.lam for i in range(torch.tensor(self.X_tr).size()[0])]
+#         b_mean = 0
+        
+#         for i in range(torch.tensor(self.X_tr).size()[0]):
+#             for j in range(torch.tensor(self.X_tr).size()[0]):
+#                 b_array[i] -= (self.cur_alphas[j] - self.cur_alphas_tilde[j]) * self.kernel(self.X_tr[j], self.X_tr[i])
+#             b_mean += b_array[i] / torch.tensor(self.X_tr).size()[0]
+        
+#         for i in range(torch.tensor(self.X_tr).size()[0]):
+#             result += (self.cur_alphas[i] - self.cur_alphas_tilde[i]) * self.kernel(X, self.X_tr[i])
+            
+#         return result + b_mean
+   
     
     
 class SupportVectorMachineCl(nn.Module):
@@ -329,11 +424,11 @@ def main(
         print(val)
     print("parameters of model are {}".format(model.parameters()))
     loss = nn.MSELoss("mean")
-    torch.backends.cudnn.benchmark = True
+
     # Keep best model around
     best_val_iteration = 0
     best_val_mse = np.inf
-    torch.backends.cudnn.benchmark = True
+
     for iteration in tqdm(range(num_iterations), desc="training"):
         validate = True if iteration % meta_val_every == 0 else False
 
@@ -341,27 +436,51 @@ def main(
         opt.zero_grad()
         meta_train_error = 0.0
         meta_valid_error = 0.0
-        for train_batch in train_batches:
-            evaluation_error = fast_adapt_boch(
-                batch=train_batch,
-                model=model,
-                loss=loss,
-                D=D,
-                device=device,
-            )
-            evaluation_error.backward()
-            meta_train_error += evaluation_error.item()
+        def _fast_adapt_boch_train(batch, model, loss, D, device):
+            nonlocal meta_train_error
+            # Unpack data
+            X_tr, y_tr = batch["train"]
+            X_tr = X_tr.to(device).float()
+            y_tr = y_tr.to(device).float()
+            X_val, y_val = batch["valid"]
+            X_val = X_val.to(device).float()
+            y_val = y_val.to(device).float()
+            # adapt algorithm
+            model.kernel.sample_features(D)
+            model.fit(X_tr, y_tr)
+            # Predict
+            y_hat = model.predict(X_val)
+            cur = loss(y_val, y_hat)
+            cur.backward()
+            meta_train_error += cur.item()
+        
+        def _fast_adapt_boch_valid(batch, model, loss, D, device):
+            nonlocal meta_valid_error
+            # Unpack data
+            X_tr, y_tr = batch["train"]
+            X_tr = X_tr.to(device).float()
+            y_tr = y_tr.to(device).float()
+            X_val, y_val = batch["valid"]
+            X_val = X_val.to(device).float()
+            y_val = y_val.to(device).float()
+            # adapt algorithm
+            model.kernel.sample_features(D)
+            model.fit(X_tr, y_tr)
+            # Predict
+            y_hat = model.predict(X_val)
+            cur = loss(y_val, y_hat)
+            cur.backward()
+            meta_valid_error += cur.item()
+        with futures.ThreadPoolExecutor(max_workers=meta_batch_size) as executor:
+            for train_batch in train_batches:
+                # タスクを追加する。
+                executor.submit(_fast_adapt_boch_train, train_batch, model, loss, D, device)
         if validate:
             val_batches = [valdata.sample() for _ in range(meta_val_batch_size)]
-            for val_batch in val_batches:
-                evaluation_error = fast_adapt_boch(
-                    batch=val_batch,
-                    model=model,
-                    loss=loss,
-                    D=D,
-                    device=device,
-                )
-                meta_valid_error += evaluation_error.item()
+            with futures.ThreadPoolExecutor(max_workers=meta_val_batch_size) as executor:
+                for val_batch in val_batches:
+                    # タスクを追加する。
+                    executor.submit(_fast_adapt_boch_valid, val_batch, model, loss, D, device)
             meta_valid_error /= meta_val_batch_size
             result["meta_valid_error"].append(meta_valid_error)
             print("Iteration {}".format(iteration))
