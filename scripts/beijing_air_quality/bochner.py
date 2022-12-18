@@ -282,9 +282,8 @@ def main(
         with futures.ThreadPoolExecutor() as executor:
             for train_batch in train_batches:
                 # タスクを追加する。
-                future = executor.submit(_fast_adapt_boch_train, train_batch, model, loss, D, device)
-                # Future オブジェクトを記録する。
-                future_list.append(future)
+                executor.submit(_fast_adapt_boch_train, train_batch, model, loss, D, device)
+                
         # for future in futures:
         #     future.result.backward()
         #     meta_train_error += future.result.item()
@@ -306,9 +305,7 @@ def main(
             with futures.ThreadPoolExecutor() as executor:
                 for val_batch in val_batches:
                     # タスクを追加する。
-                    future = executor.submit(_fast_adapt_boch_valid, val_batch, model, loss, D, device)
-                    # Future オブジェクトを記録する。
-                    future_list.append(future)
+                    executor.submit(_fast_adapt_boch_valid, val_batch, model, loss, D, device)
             # for future in futures:
             #     future.result.backward()
             #     meta_train_error += future.result.item()
