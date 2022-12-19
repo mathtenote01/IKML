@@ -209,27 +209,6 @@ def main(
         opt.zero_grad()
         meta_train_error = 0.0
         meta_valid_error = 0.0
-        # def func(i, j, k):
-        #     global meta_train_error
-        #     meta_train_error += 1
-        #     time.sleep(2)
-        #     print(i * j * k)
-        #     return i + j + k
-
-
-        # future_list = []
-
-        # with futures.ThreadPoolExecutor() as executor:
-        #     for i in range(10):
-        #         # タスクを追加する。
-        #         future = executor.submit(func, i, i*2, i**2)
-        #         # Future オブジェクトを記録する。
-        #         future_list.append(future)
-        # print('a')
-
-        # print([x.result() for x in future_list])
-        # print(meta_train_error)
-        
         def _fast_adapt_boch_train(batch, model, loss, D, device):
             nonlocal meta_train_error
             # Unpack data
@@ -289,16 +268,6 @@ def main(
         #     meta_train_error += future.result.item()
         if validate:
             val_batches = [valdata.sample() for _ in range(meta_val_batch_size)]
-            # for val_batch in val_batches:
-            # for val_batch in val_batches:
-            #     evaluation_error = fast_adapt_boch(
-            #         batch=val_batch,
-            #         model=model,
-            #         loss=loss,
-            #         D=D,
-            #         device=device,
-            #     )
-            #     meta_valid_error += evaluation_error.item()
             future_list = []
             with futures.ThreadPoolExecutor(max_workers=meta_val_batch_size) as executor:
                 for val_batch in val_batches:
