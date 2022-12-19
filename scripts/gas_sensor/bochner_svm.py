@@ -1,6 +1,7 @@
 import argparse
 import pickle as pkl
 import warnings
+from tabnanny import verbose
 from collections import OrderedDict
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -14,6 +15,7 @@ from implicit_kernel_meta_learning.data_utils import GasSensorDataLoader
 from implicit_kernel_meta_learning.experiment_utils import set_seed
 from implicit_kernel_meta_learning.kernels import BochnerKernel
 from concurrent import futures
+import scipy.optimize as sco
 warnings.filterwarnings("ignore")
 
 
