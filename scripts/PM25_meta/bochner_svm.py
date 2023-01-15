@@ -14,8 +14,8 @@ import optuna
 from implicit_kernel_meta_learning.algorithms import SupportVectorMachine
 # import cvxopt
 # from cvxopt import matrix
-from implicit_kernel_meta_learning.data_utils import AirQualityDataLoader
-from implicit_kernel_meta_learning.data_utils import GasSensorDataLoader
+from implicit_kernel_meta_learning.data_utils import AssessingPM25DataLoader
+from implicit_kernel_meta_learning.data_utils import BKBWaterQualityDataLoader
 from implicit_kernel_meta_learning.experiment_utils import set_seed
 from implicit_kernel_meta_learning.kernels import BochnerKernel
 from concurrent import futures
@@ -229,12 +229,12 @@ def main(
     # set_seed(seed, False)
 
     # # Load train/validation/test data
-    # traindata = AirQualityDataLoader(k_support, k_query, split="train")
-    # valdata = AirQualityDataLoader(k_support, k_query, split="valid")
-    # testdata = AirQualityDataLoader(k_support, k_query, split="test")
-    # traindata_meta = GasSensorDataLoader(k_support, k_query, split="train", t=True)
-    # valdata_meta = GasSensorDataLoader(k_support, k_query, split="valid", t=True)
-    # testdata_meta = GasSensorDataLoader(k_support, k_query, split="test", t=True)
+    # traindata = AssessingPM25DataLoader(k_support, k_query, split="train")
+    # valdata = AssessingPM25DataLoader(k_support, k_query, split="valid")
+    # testdata = AssessingPM25DataLoader(k_support, k_query, split="test")
+    # traindata_meta = BKBWaterQualityDataLoader(k_support, k_query, split="train")
+    # valdata_meta = BKBWaterQualityDataLoader(k_support, k_query, split="valid")
+    # testdata_meta = BKBWaterQualityDataLoader(k_support, k_query, split="test")
 
     # # Holdout errors
     # valid_batches = [valdata_meta.sample() for _ in range(holdout_size)]
@@ -423,12 +423,12 @@ def main(
         set_seed(seed, False)
 
         # Load train/validation/test data
-        traindata = AirQualityDataLoader(k_support, k_query, split="train")
-        valdata = AirQualityDataLoader(k_support, k_query, split="valid")
-        testdata = AirQualityDataLoader(k_support, k_query, split="test")
-        traindata_meta = GasSensorDataLoader(k_support, k_query, split="train", t=True)
-        valdata_meta = GasSensorDataLoader(k_support, k_query, split="test", t=True)
-        testdata_meta = GasSensorDataLoader(k_support, k_query, split="test", t=True)
+        traindata = AssessingPM25DataLoader(k_support, k_query, split="train")
+        valdata = AssessingPM25DataLoader(k_support, k_query, split="valid")
+        testdata = AssessingPM25DataLoader(k_support, k_query, split="test")
+        traindata_meta = BKBWaterQualityDataLoader(k_support, k_query, split="train")
+        valdata_meta = BKBWaterQualityDataLoader(k_support, k_query, split="test")
+        testdata_meta = BKBWaterQualityDataLoader(k_support, k_query, split="test")
 
         # Holdout errors
         valid_batches = [valdata_meta.sample() for _ in range(holdout_size)]

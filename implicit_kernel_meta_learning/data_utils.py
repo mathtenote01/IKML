@@ -41,6 +41,12 @@ class AirQualityDataLoader:
             "DEWP",
             "RAIN",
             "t",
+            "zero_one",
+            "zero_two",
+            "zero_three",
+            "zero_four",
+            "zero_five",
+            "t",
         ]
 
     def _load_split(self):
@@ -170,6 +176,347 @@ class GasSensorDataLoader:
             assert y_val.shape[0] == self.k_query, "y_val.shape: {}, k_val: {}".format(
                 y_val.shape, self.k_query
             )
+
+        task = {
+            "train": (torch.tensor(X_tr), torch.tensor(y_tr).reshape(-1, 1)),
+            "valid": (torch.tensor(X_val), torch.tensor(y_val).reshape(-1, 1)),
+            "full": task_df,
+        }
+        return task
+
+
+class ethyleneCOLoader:
+    def __init__(self, k_support, k_query, split="train", forecast=False):
+        self.data_dir = PROCESSED_DATA_DIR / "ethylene_CO"
+        self.k_support = k_support
+        self.k_query = k_query
+        self.k = k_query + k_support
+        self.split = split
+        self.forecast = forecast
+        self.stations = [
+            "ethylene_CO",
+        ]
+        self._load_split()
+        self.output_col = "CO conc"
+        self.feature_cols = [
+            "channel1",
+            "channel2",
+            "channel3",
+            "channel4",
+            "channel5",
+            "channel6",
+            "channel7",
+            "channel8",
+            "channel9",
+            "channel10",
+            "channel11",
+            "channel12",
+            "channel13",
+            "channel14",
+        ]
+
+    def _load_split(self):
+        with open(self.data_dir / f"{self.split}.pkl", "rb") as f:
+            self.data_dict = pickle.load(f)
+
+    def sample(self, station=None):
+        # Sample station uniformly if not given
+        if station is None:
+            station = random.choice(self.stations)
+
+        df = self.data_dict[station]
+        end = len(df) - self.k
+        start = np.random.randint(0, end)
+        task_df = df.iloc[start : start + self.k, :].copy()
+        # Instead of using time, we just append t from 1 to self.k
+        # this means that we still have a sense of temporal direction
+        task_df["t"] = np.arange(self.k)
+        task_data = task_df.loc[:, self.feature_cols].to_numpy()
+        task_output = task_df.loc[:, self.output_col].to_numpy()
+
+        bool_train_mask = np.ones(self.k, dtype=bool)
+        bool_train_mask[self.k_support :] = False
+        if not self.forecast:
+            bool_train_mask = bool_train_mask[np.random.permutation(self.k)]
+        bool_val_mask = ~bool_train_mask
+
+        X_tr = task_data[bool_train_mask]
+        y_tr = task_output[bool_train_mask]
+
+        X_val = task_data[bool_val_mask]
+        y_val = task_output[bool_val_mask]
+
+        task = {
+            "train": (torch.tensor(X_tr), torch.tensor(y_tr).reshape(-1, 1)),
+            "valid": (torch.tensor(X_val), torch.tensor(y_val).reshape(-1, 1)),
+            "full": task_df,
+        }
+        return task
+
+class BKBWaterQualityDataLoader:
+    def __init__(self, k_support, k_query, split="train", forecast=False):
+        self.data_dir = PROCESSED_DATA_DIR / "BKB_WaterQualityData_2020084"
+        self.k_support = k_support
+        self.k_query = k_query
+        self.k = k_query + k_support
+        self.split = split
+        self.forecast = forecast
+        self.stations = [
+            "BKB_WaterQualityData_2020084",
+        ]
+        self._load_split()
+        self.output_col = "Dissolved Oxygen (mg/L)"
+        self.feature_cols = [
+            "pH (standard units)",
+            "Secchi Depth (m)",
+            "Water Depth (m)",
+            "Water Temp (?C)",
+            "Air Temp-Celsius",
+            "Air Temp (?F)",
+            "zero_one",
+            "zero_two",
+            "zero_three",
+            "zero_four",
+            "zero_five",
+            "zero_six",
+            "zero_seven",
+            "zero_eight",
+        ]
+
+    def _load_split(self):
+        with open(self.data_dir / f"{self.split}.pkl", "rb") as f:
+            self.data_dict = pickle.load(f)
+
+    def sample(self, station=None):
+        # Sample station uniformly if not given
+        if station is None:
+            station = random.choice(self.stations)
+
+        df = self.data_dict[station]
+        end = len(df) - self.k
+        start = np.random.randint(0, end)
+        task_df = df.iloc[start : start + self.k, :].copy()
+        # Instead of using time, we just append t from 1 to self.k
+        # this means that we still have a sense of temporal direction
+        task_df["t"] = np.arange(self.k)
+        task_data = task_df.loc[:, self.feature_cols].to_numpy()
+        task_output = task_df.loc[:, self.output_col].to_numpy()
+
+        bool_train_mask = np.ones(self.k, dtype=bool)
+        bool_train_mask[self.k_support :] = False
+        if not self.forecast:
+            bool_train_mask = bool_train_mask[np.random.permutation(self.k)]
+        bool_val_mask = ~bool_train_mask
+
+        X_tr = task_data[bool_train_mask]
+        y_tr = task_output[bool_train_mask]
+
+        X_val = task_data[bool_val_mask]
+        y_val = task_output[bool_val_mask]
+
+        task = {
+            "train": (torch.tensor(X_tr), torch.tensor(y_tr).reshape(-1, 1)),
+            "valid": (torch.tensor(X_val), torch.tensor(y_val).reshape(-1, 1)),
+            "full": task_df,
+        }
+        return task
+
+class PM25Coal_Fired_Power_PlantsDataLoader:
+    def __init__(self, k_support, k_query, split="train", forecast=False):
+        self.data_dir = PROCESSED_DATA_DIR / "Incidence of Air Pollution_from Coal_Fired_Power_Plants"
+        self.k_support = k_support
+        self.k_query = k_query
+        self.k = k_query + k_support
+        self.split = split
+        self.forecast = forecast
+        self.stations = [
+            "Incidence of Air Pollution_from Coal_Fired_Power_Plants",
+        ]
+        self._load_split()
+        self.output_col = "PM25"
+        self.feature_cols = [
+            "NO2",
+            "CO2",
+            "CO2_b09",
+            "CO2_a09",
+            "CO2_b01",
+            "CO2_a01",
+            "zero_one",
+            "zero_two",
+            "zero_three",
+            "zero_four",
+            "zero_five",
+            "zero_six",
+            "zero_seven",
+            "zero_eight",
+        ]
+
+    def _load_split(self):
+        with open(self.data_dir / f"{self.split}.pkl", "rb") as f:
+            self.data_dict = pickle.load(f)
+
+    def sample(self, station=None):
+        # Sample station uniformly if not given
+        if station is None:
+            station = random.choice(self.stations)
+
+        df = self.data_dict[station]
+        end = len(df) - self.k
+        start = np.random.randint(0, end)
+        task_df = df.iloc[start : start + self.k, :].copy()
+        # Instead of using time, we just append t from 1 to self.k
+        # this means that we still have a sense of temporal direction
+        task_df["t"] = np.arange(self.k)
+        task_data = task_df.loc[:, self.feature_cols].to_numpy()
+        task_output = task_df.loc[:, self.output_col].to_numpy()
+
+        bool_train_mask = np.ones(self.k, dtype=bool)
+        bool_train_mask[self.k_support :] = False
+        if not self.forecast:
+            bool_train_mask = bool_train_mask[np.random.permutation(self.k)]
+        bool_val_mask = ~bool_train_mask
+
+        X_tr = task_data[bool_train_mask]
+        y_tr = task_output[bool_train_mask]
+
+        X_val = task_data[bool_val_mask]
+        y_val = task_output[bool_val_mask]
+
+        task = {
+            "train": (torch.tensor(X_tr), torch.tensor(y_tr).reshape(-1, 1)),
+            "valid": (torch.tensor(X_val), torch.tensor(y_val).reshape(-1, 1)),
+            "full": task_df,
+        }
+        return task
+
+class Covid_19economic_DataLoader:
+    def __init__(self, k_support, k_query, split="train", forecast=False):
+        self.data_dir = PROCESSED_DATA_DIR / "COVID_19_california_economic_shutdown"
+        self.k_support = k_support
+        self.k_query = k_query
+        self.k = k_query + k_support
+        self.split = split
+        self.forecast = forecast
+        self.stations = [
+            "COVID19_california_economic_shutdown",
+        ]
+        self._load_split()
+        self.output_col = "AOD"
+        self.feature_cols = [
+            "GEOID",
+            "NO2",
+            "Prc",
+            "RH",
+            "Temp",
+            "income",
+            "shr_blc",
+            "shr_hsp",
+            "tract",
+            "week",
+            "year",
+            "zero_one",
+            "zero_two",
+            "zero_three",
+        ]
+
+    def _load_split(self):
+        with open(self.data_dir / f"{self.split}.pkl", "rb") as f:
+            self.data_dict = pickle.load(f)
+
+    def sample(self, station=None):
+        # Sample station uniformly if not given
+        if station is None:
+            station = random.choice(self.stations)
+
+        df = self.data_dict[station]
+        end = len(df) - self.k
+        start = np.random.randint(0, end)
+        task_df = df.iloc[start : start + self.k, :].copy()
+        # Instead of using time, we just append t from 1 to self.k
+        # this means that we still have a sense of temporal direction
+        task_df["t"] = np.arange(self.k)
+        task_data = task_df.loc[:, self.feature_cols].to_numpy()
+        task_output = task_df.loc[:, self.output_col].to_numpy()
+
+        bool_train_mask = np.ones(self.k, dtype=bool)
+        bool_train_mask[self.k_support :] = False
+        if not self.forecast:
+            bool_train_mask = bool_train_mask[np.random.permutation(self.k)]
+        bool_val_mask = ~bool_train_mask
+
+        X_tr = task_data[bool_train_mask]
+        y_tr = task_output[bool_train_mask]
+
+        X_val = task_data[bool_val_mask]
+        y_val = task_output[bool_val_mask]
+
+        task = {
+            "train": (torch.tensor(X_tr), torch.tensor(y_tr).reshape(-1, 1)),
+            "valid": (torch.tensor(X_val), torch.tensor(y_val).reshape(-1, 1)),
+            "full": task_df,
+        }
+        return task
+
+class AssessingPM25DataLoader:
+    def __init__(self, k_support, k_query, split="train", forecast=False):
+        self.data_dir = PROCESSED_DATA_DIR / "Assessing PM2.5 Model Performance"
+        self.k_support = k_support
+        self.k_query = k_query
+        self.k = k_query + k_support
+        self.split = split
+        self.forecast = forecast
+        self.stations = [
+            "Assessing PM2.5 Model Performance",
+        ]
+        self._load_split()
+        self.output_col = "avg_obs"
+        self.feature_cols = [
+            "year",
+            "nmb",
+            "fb",
+            "nme",
+            "fe",
+            "rmse",
+            "mb",
+            "rcor",
+            "zero_one",
+            "zero_two",
+            "zero_three",
+            "zero_four",
+            "zero_five",
+            "zero_six",
+        ]
+
+    def _load_split(self):
+        with open(self.data_dir / f"{self.split}.pkl", "rb") as f:
+            self.data_dict = pickle.load(f)
+
+    def sample(self, station=None):
+        # Sample station uniformly if not given
+        if station is None:
+            station = random.choice(self.stations)
+
+        df = self.data_dict[station]
+        end = len(df) - self.k
+        start = np.random.randint(0, end)
+        task_df = df.iloc[start : start + self.k, :].copy()
+        # Instead of using time, we just append t from 1 to self.k
+        # this means that we still have a sense of temporal direction
+        task_df["t"] = np.arange(self.k)
+        task_data = task_df.loc[:, self.feature_cols].to_numpy()
+        task_output = task_df.loc[:, self.output_col].to_numpy()
+
+        bool_train_mask = np.ones(self.k, dtype=bool)
+        bool_train_mask[self.k_support :] = False
+        if not self.forecast:
+            bool_train_mask = bool_train_mask[np.random.permutation(self.k)]
+        bool_val_mask = ~bool_train_mask
+
+        X_tr = task_data[bool_train_mask]
+        y_tr = task_output[bool_train_mask]
+
+        X_val = task_data[bool_val_mask]
+        y_val = task_output[bool_val_mask]
 
         task = {
             "train": (torch.tensor(X_tr), torch.tensor(y_tr).reshape(-1, 1)),

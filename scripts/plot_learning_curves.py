@@ -18,13 +18,15 @@ plt.rcParams["xtick.labelsize"] = 14
 plt.rcParams["ytick.labelsize"] = 14
 plt.rcParams["legend.fontsize"] = 16
 
-
+GUILD_RUNS_DIR = Path("/Users/daiki/.guild/runs")
 def load_ids_from_batch(gid):
     """Load all results from a batch run"""
-    complete_dir = glob(str(GUILD_RUNS_DIR / gid) + "*")[0]
-    all_dirs = glob(os.path.join(complete_dir, "*"))
-    all_dirs = [Path(p).name for p in all_dirs]
-    return all_dirs
+    # complete_dir = glob(str(GUILD_RUNS_DIR / gid) + "*")[0]
+    complete_dirs = glob(str(GUILD_RUNS_DIR / gid) + "*")
+    # all_dirs = glob(os.path.join(complete_dir, "*"))
+    # all_dirs = [Path(p).name for p in all_dirs]
+    # return all_dirs
+    return complete_dirs
 
 
 def load_result(gid):
@@ -64,6 +66,7 @@ class ExperimentColormap(Enum):
     LSQ_BIAS = palette[5]
     MAML = palette[7]
     R2D2 = palette[1]
+    BOCHNER_SVM = palette[8]
     GAUSS_ORACLE = "black"
 
 
@@ -108,6 +111,8 @@ def main(
     gauss_id,
     gauss_oracle_id,
     bochner_id,
+    bochner_svm_id,
+    bochner_gauss_id,
     y_upper_lim,
     y_lower_lim,
     output_dir,
@@ -118,7 +123,7 @@ def main(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     fig, ax = plt.subplots(figsize=figsize)
-
+    
     if mkl_id:
         mkl_good_ids = load_ids_from_batch(mkl_id)
         mkl_good_results = []
@@ -128,6 +133,7 @@ def main(
         meta_val = make_ts(mkl_good_results, "meta_valid_error")
         meta_val_every = mkl_good_results[0]["meta_val_every"]
         t = meta_val_every * np.arange(len(meta_val.T))
+        print("meta_val is {}, meta_val_every is {}, t is {}, gid is {}".format(meta_val, meta_val_every, t, mkl_id) )
         fig, ax = plot_ci(
             meta_val,
             t,
@@ -148,6 +154,7 @@ def main(
 
         meta_val = make_ts(lsq_bias_results, "meta_valid_error")
         meta_val_every = lsq_bias_results[0]["meta_val_every"]
+        t = meta_val_every * np.arange(len(meta_val.T))
         fig, ax = plot_ci(
             meta_val,
             t,
@@ -168,6 +175,7 @@ def main(
 
         meta_val = make_ts(maml_results, "meta_valid_error")
         meta_val_every = maml_results[0]["meta_val_every"]
+        t = meta_val_every * np.arange(len(meta_val.T))
         fig, ax = plot_ci(
             meta_val,
             t,
@@ -188,6 +196,7 @@ def main(
 
         meta_val = make_ts(r2d2_results, "meta_valid_error")
         meta_val_every = r2d2_results[0]["meta_val_every"]
+        t = meta_val_every * np.arange(len(meta_val.T))
         fig, ax = plot_ci(
             meta_val,
             t,
@@ -208,6 +217,7 @@ def main(
 
         meta_val = make_ts(gauss_results, "meta_valid_error")
         meta_val_every = gauss_results[0]["meta_val_every"]
+        t = meta_val_every * np.arange(len(meta_val.T))
         fig, ax = plot_ci(
             meta_val,
             t,
@@ -228,6 +238,7 @@ def main(
 
         meta_val = make_ts(bochner_results, "meta_valid_error")
         meta_val_every = bochner_results[0]["meta_val_every"]
+        t = meta_val_every * np.arange(len(meta_val.T))
         fig, ax = plot_ci(
             meta_val,
             t,
@@ -256,12 +267,54 @@ def main(
             color=ExperimentColormap.GAUSS_ORACLE.value,
             label="Gaussian Oracle",
         )
+        
+    if bochner_svm_id:
+        bochner_svm_ids = load_ids_from_batch(bochner_svm_id)
+        bochner_svm_results = []
+        for gid in bochner_svm_ids:
+            bochner_svm_results.append(load_result(gid))
+
+        meta_val = make_ts(bochner_svm_results, "meta_valid_error")
+        meta_val_every = bochner_svm_results[0]["meta_val_every"]
+        t = meta_val_every * np.arange(len(meta_val.T))
+        fig, ax = plot_ci(
+            meta_val,
+            t,
+            fig,
+            ax,
+            color=ExperimentColormap.BOCHNER_SVM.value,
+            alpha=alpha,
+            alpha_fill=alpha_fill,
+            lw=lw,
+            label="IKML_svm",
+        )
+    
+    if bochner_gauss_id:
+        bochner_gauss_ids = load_ids_from_batch(bochner_gauss_id)
+        bochner_gauss_results = []
+        for gid in bochner_gauss_ids:
+            bochner_gauss_results.append(load_result(gid))
+
+        meta_val = make_ts(bochner_gauss_results, "meta_valid_error")
+        meta_val_every = bochner_gauss_results[0]["meta_val_every"]
+        t = meta_val_every * np.arange(len(meta_val.T))
+        fig, ax = plot_ci(
+            meta_val,
+            t,
+            fig,
+            ax,
+            color=ExperimentColormap.BOCHNER_SVM.value,
+            alpha=alpha,
+            alpha_fill=alpha_fill,
+            lw=lw,
+            label="IKML_gauss",
+        )
 
     leg = ax.legend()
     for line in leg.get_lines():
         line.set_linewidth(4.0)
     ax.set_ylim((y_lower_lim, y_upper_lim))
-    ax.set_ylabel("RMSE")
+    ax.set_ylabel("RMSE(validation_error)")
     ax.set_xlabel("Iteration")
     fig.savefig(output_dir / "learning_curves_valid.pdf", format="pdf")
     fig.savefig(output_dir / "learning_curves_valid.png", format="png")
@@ -276,6 +329,8 @@ if __name__ == "__main__":
     parser.add_argument("--gauss_id", type=str, default="")
     parser.add_argument("--gauss_oracle_id", type=str, default="")
     parser.add_argument("--bochner_id", type=str, default="")
+    parser.add_argument("--bochner_svm_id", type=str, default="")
+    parser.add_argument("--bochner_gauss_id", type=str, default="")
     parser.add_argument("--y_upper_lim", type=float, default=60.0)
     parser.add_argument("--y_lower_lim", type=float, default=0.0)
     parser.add_argument("--output_dir", type=str)

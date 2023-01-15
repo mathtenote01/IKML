@@ -38,6 +38,57 @@ class RidgeRegression(nn.Module):
     def predict(self, X):
         return torch.matmul(self.kernel(X, self.X_tr), self.alphas)
 
+class GaussProcess(nn.Module):
+    def __init__(self, lam, kernel, device=None):
+        super(GaussProcess, self).__init__()
+        self.lam = lam
+        self.kernel = kernel
+        self.alphas = None
+        self.X_tr = None
+        self.Y_tr = None
+        if device is None:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        else:
+            self.device = device
+
+    def fit(self, X, Y):
+        if len(X.size()) == 3:
+            b, n, d = X.size()
+            b, m, l = Y.size()
+        elif len(X.size()) == 2:
+            n, d = X.size()
+            m, l = Y.size()
+        assert (
+            n == m
+        ), "Tensors need to have same dimension, dimensions are {} and {}".format(n, m)
+
+        self.K = self.kernel(X, X)
+        self.K_nl = self.K + self.lam * n * torch.eye(n).to(self.device)
+        # To use solve we need to make sure Y is a float
+        # and not an int
+        # Yの標本平均が入る.
+        self.mu_of_Y = torch.mean(input=Y)
+        self.alphas, _ = torch.solve(Y.float(), self.K_nl)
+        self.X_tr = X
+        self.Y_tr = Y
+
+    def predict(self, X):
+        self.kernel(X, X)
+        if len(X.size()) == 3:
+            b, n, d = self.X_tr.size()
+            b, m, l = self.Y_tr.size()
+            full_mu_of_Y = self.mu_of_Y * torch.ones(n, dtype=torch.float32)
+        elif len(X.size()) == 2:
+            n, d = self.X_tr.size()
+            m, l = self.Y_tr.size()
+            full_mu_of_Y = self.mu_of_Y * torch.ones(n, dtype=torch.float32)
+        # 事後分布の平均を計算して入れる
+        expect = self.mu_of_Y + torch.matmul(torch.matmul(self.kernel(X, self.X_tr), torch.inverse(self.K_nl)), self.Y_tr - full_mu_of_Y)
+        # 事後分布の分散を計算して入れる
+        variation = self.kernel(X, X) - torch.matmul(torch.matmul(self.kernel(X, self.X_tr), torch.inverse(self.K_nl)), self.kernel(self.X_tr, X))
+        return torch.normal(mean=expect, std=torch.sqrt(variation))
+
+
 class SupportVectorMachine(nn.Module):
     def __init__(self, lam, kernel, device=None):
         super(SupportVectorMachine, self).__init__()
