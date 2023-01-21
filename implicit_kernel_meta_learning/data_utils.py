@@ -270,7 +270,6 @@ class BKBWaterQualityDataLoader:
             "Secchi Depth (m)",
             "Water Depth (m)",
             "Water Temp (?C)",
-            "Air Temp-Celsius",
             "Air Temp (?F)",
             "zero_one",
             "zero_two",
@@ -280,6 +279,7 @@ class BKBWaterQualityDataLoader:
             "zero_six",
             "zero_seven",
             "zero_eight",
+            "zero_nine",
         ]
 
     def _load_split(self):
