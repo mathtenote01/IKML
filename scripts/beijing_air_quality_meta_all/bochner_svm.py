@@ -9,13 +9,19 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import scipy.optimize as sco
-from tqdm import tqdm 
+from tqdm import tqdm
+import random
 import optuna
 from implicit_kernel_meta_learning.algorithms import SupportVectorMachine
 # import cvxopt
 # from cvxopt import matrix
+from implicit_kernel_meta_learning.data_utils import AssessingPM25DataLoader
 from implicit_kernel_meta_learning.data_utils import AirQualityDataLoader
+from implicit_kernel_meta_learning.data_utils import GasSensorDataLoader
 from implicit_kernel_meta_learning.data_utils import ethyleneCOLoader
+from implicit_kernel_meta_learning.data_utils import BKBWaterQualityDataLoader
+from implicit_kernel_meta_learning.data_utils import PM25Coal_Fired_Power_PlantsDataLoader
+from implicit_kernel_meta_learning.data_utils import Covid_19economic_DataLoader
 from implicit_kernel_meta_learning.experiment_utils import set_seed
 from implicit_kernel_meta_learning.kernels import BochnerKernel
 from concurrent import futures
@@ -197,7 +203,7 @@ def create_mlp(num_layers, hidden_dim, in_dim, out_dim, nonlinearity, batch_norm
     return mlp
 
 
-        
+
 def main(
     seed,
     k_support,
@@ -229,12 +235,12 @@ def main(
     # set_seed(seed, False)
 
     # # Load train/validation/test data
-    # traindata = AirQualityDataLoader(k_support, k_query, split="train")
-    # valdata = AirQualityDataLoader(k_support, k_query, split="valid")
-    # testdata = AirQualityDataLoader(k_support, k_query, split="test")
-    # traindata_meta = ethyleneCOLoader(k_support, k_query, split="train")
-    # valdata_meta = ethyleneCOLoader(k_support, k_query, split="valid")
-    # testdata_meta = ethyleneCOLoader(k_support, k_query, split="test")
+    # traindata_meta = AirQualityDataLoader(k_support, k_query, split="train")
+    # valdata_meta = AirQualityDataLoader(k_support, k_query, split="valid")
+    # testdata_meta = AirQualityDataLoader(k_support, k_query, split="test")
+    # traindata = GasSensorDataLoader(k_support, k_query, split="train", t=True)
+    # valdata = GasSensorDataLoader(k_support, k_query, split="valid", t=True)
+    # testdata = GasSensorDataLoader(k_support, k_query, split="test", t=True)
 
     # # Holdout errors
     # valid_batches = [valdata_meta.sample() for _ in range(holdout_size)]
@@ -261,11 +267,35 @@ def main(
     # # Keep best model around
     # best_val_iteration = 0
     # best_val_mse = np.inf
+    
+    # traindata_ = [None for _ in range(6)]
+    # traindata_[0] = GasSensorDataLoader(k_support, k_query, split="train", t='True')
+    # traindata_[1] = ethyleneCOLoader(k_support, k_query, split="train")
+    # traindata_[2] = BKBWaterQualityDataLoader(k_support, k_query, split="train")
+    # traindata_[3] = PM25Coal_Fired_Power_PlantsDataLoader(k_support, k_query, split="train")
+    # traindata_[4] = Covid_19economic_DataLoader(k_support, k_query, split="train")
+    # traindata_[5] = AssessingPM25DataLoader(k_support, k_query, split="train")
+
+    # def random_data_choice():
+    #     nonlocal traindata_
+    #     cur = random.random()
+    #     if cur < 0.16:
+    #         return traindata_[0].sample()
+    #     elif cur < 0.32:
+    #         return traindata_[1].sample()
+    #     elif cur < 0.48:
+    #         return traindata_[2].sample()
+    #     elif cur < 0.64:
+    #         return traindata_[3].sample()
+    #     elif cur < 0.8:
+    #         return traindata_[4].sample()
+    #     else:
+    #         return traindata_[5].sample()
 
     # for iteration in tqdm(range(num_iterations), desc="training"):
     #     validate = True if iteration % meta_val_every == 0 else False
 
-    #     train_batches = [traindata.sample() for _ in range(meta_batch_size)]
+    #     train_batches = [random_data_choice() for _ in range(meta_batch_size)]
     #     opt.zero_grad()
     #     meta_train_error = 0.0
     #     meta_valid_error = 0.0
@@ -396,18 +426,21 @@ def main(
         nonlocal seed
         nonlocal k_support
         nonlocal k_query
-        num_iterations = 300
+        nonlocal num_iterations
+        # num_iterations = 300
         nonlocal meta_batch_size
         nonlocal meta_val_batch_size
-        meta_val_every = 25
+        nonlocal meta_val_every
+        # meta_val_every = 25
         nonlocal holdout_size
         nonlocal num_layers
         nonlocal latent_d
         nonlocal D
         nonlocal hidden_dim
         nonlocal nonlinearity
-        meta_lr = trial.suggest_float("meta_lr", 0.00001, 1)
-        lam = trial.suggest_float("lam", 0.001, 1)
+        nonlocal meta_lr
+        # meta_lr = trial.suggest_float("meta_lr", 0.00001, 1)
+        lam = trial.suggest_float("lam", 0.00001, 1)
 
         
         result = OrderedDict(
@@ -423,12 +456,12 @@ def main(
         set_seed(seed, False)
 
         # Load train/validation/test data
-        traindata = AirQualityDataLoader(k_support, k_query, split="train")
-        valdata = AirQualityDataLoader(k_support, k_query, split="valid")
-        testdata = AirQualityDataLoader(k_support, k_query, split="test")
-        traindata_meta = ethyleneCOLoader(k_support, k_query, split="train")
-        valdata_meta = ethyleneCOLoader(k_support, k_query, split="test")
-        testdata_meta = ethyleneCOLoader(k_support, k_query, split="test")
+        traindata_meta = AirQualityDataLoader(k_support, k_query, split="train")
+        valdata_meta = AirQualityDataLoader(k_support, k_query, split="valid")
+        testdata_meta = AirQualityDataLoader(k_support, k_query, split="test")
+        traindata = GasSensorDataLoader(k_support, k_query, split="train", t=True)
+        valdata = GasSensorDataLoader(k_support, k_query, split="test", t=True)
+        testdata = GasSensorDataLoader(k_support, k_query, split="test", t=True)
 
         # Holdout errors
         valid_batches = [valdata_meta.sample() for _ in range(holdout_size)]
@@ -455,11 +488,35 @@ def main(
         # Keep best model around
         best_val_iteration = 0
         best_val_mse = np.inf
+    
+        traindata_ = [None for _ in range(6)]
+        traindata_[0] = GasSensorDataLoader(k_support, k_query, split="train", t='True')
+        traindata_[1] = ethyleneCOLoader(k_support, k_query, split="train")
+        traindata_[2] = BKBWaterQualityDataLoader(k_support, k_query, split="train")
+        traindata_[3] = PM25Coal_Fired_Power_PlantsDataLoader(k_support, k_query, split="train")
+        traindata_[4] = Covid_19economic_DataLoader(k_support, k_query, split="train")
+        traindata_[5] = AssessingPM25DataLoader(k_support, k_query, split="train")
+
+        def random_data_choice():
+            nonlocal traindata_
+            cur = random.random()
+            if cur < 0.16:
+                return traindata_[0].sample()
+            elif cur < 0.32:
+                return traindata_[1].sample()
+            elif cur < 0.48:
+                return traindata_[2].sample()
+            elif cur < 0.64:
+                return traindata_[3].sample()
+            elif cur < 0.8:
+                return traindata_[4].sample()
+            else:
+                return traindata_[5].sample()
 
         for iteration in tqdm(range(num_iterations), desc="training"):
             validate = True if iteration % meta_val_every == 0 else False
 
-            train_batches = [traindata.sample() for _ in range(meta_batch_size)]
+            train_batches = [random_data_choice() for _ in range(meta_batch_size)]
             opt.zero_grad()
             meta_train_error = 0.0
             meta_valid_error = 0.0
@@ -501,6 +558,7 @@ def main(
                     # タスクを追加する。
                     executor.submit(_fast_adapt_boch_train, train_batch, model, loss, D, device)
             if validate:
+                return meta_train_error
                 val_batches = [valdata_meta.sample() for _ in range(meta_val_batch_size)]
                 torch.save(model.state_dict(), "model.pth")
                 # 保存したモデルを読み込む。
@@ -530,7 +588,7 @@ def main(
         # Load best model
         print("best_valid_iteration: {}".format(best_val_iteration))
         print("best_valid_mse: {}".format(best_val_mse))
-        model.load_state_dict(best_state_dict)
+        # model.load_state_dict(best_state_dict)
 
         meta_valid_error = 0.0
         meta_test_error = 0.0

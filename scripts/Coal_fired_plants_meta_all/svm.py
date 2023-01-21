@@ -1,22 +1,28 @@
 import argparse
 import pickle as pkl
 import warnings
+from tabnanny import verbose
 from collections import OrderedDict
-from numba import jit, prange
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
+import random
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from tqdm import tqdm
-from multiprocessing import Pool
 from implicit_kernel_meta_learning.algorithms import RidgeRegression
+from implicit_kernel_meta_learning.algorithms import SupportVectorMachine
+from implicit_kernel_meta_learning.data_utils import AssessingPM25DataLoader
 from implicit_kernel_meta_learning.data_utils import AirQualityDataLoader
+from implicit_kernel_meta_learning.data_utils import GasSensorDataLoader
 from implicit_kernel_meta_learning.data_utils import ethyleneCOLoader
+from implicit_kernel_meta_learning.data_utils import BKBWaterQualityDataLoader
+from implicit_kernel_meta_learning.data_utils import PM25Coal_Fired_Power_PlantsDataLoader
+from implicit_kernel_meta_learning.data_utils import Covid_19economic_DataLoader
 from implicit_kernel_meta_learning.experiment_utils import set_seed
 from implicit_kernel_meta_learning.kernels import BochnerKernel
 from concurrent import futures
-import time
+import scipy.optimize as sco
 import optuna
 warnings.filterwarnings("ignore")
 
@@ -163,10 +169,6 @@ def main(
     meta_lr,
     lam,
 ):
-#     aira_quality_meta:bochner_ikml
-# 'meta_lr': 0.28716179414921317, 'lam': 0.5270691519144275
-    # meta_lr = 0.28716
-    # lam = 0.527069
     # nonlinearity = get_nonlinearity(nonlinearity)
     # result = OrderedDict(
     #     meta_train_error=[],
@@ -181,15 +183,12 @@ def main(
     # set_seed(seed, False)
 
     # # Load train/validation/test data
-    # # traindata = AirQualityDataLoader(k_support, k_query, split="train")
-    # # valdata = AirQualityDataLoader(k_support, k_query, split="valid")
-    # # testdata = AirQualityDataLoader(k_support, k_query, split="test")
-    # traindata = AirQualityDataLoader(k_support, k_query, split="train")
-    # valdata = AirQualityDataLoader(k_support, k_query, split="valid")
-    # testdata = AirQualityDataLoader(k_support, k_query, split="test")
-    # traindata_meta = ethyleneCOLoader(k_support, k_query, split="train")
-    # valdata_meta = ethyleneCOLoader(k_support, k_query, split="valid")
-    # testdata_meta = ethyleneCOLoader(k_support, k_query, split="test")
+    # traindata_meta = PM25Coal_Fired_Power_PlantsDataLoader(k_support, k_query, split="train")
+    # valdata_meta = PM25Coal_Fired_Power_PlantsDataLoader(k_support, k_query, split="valid")
+    # testdata_meta = PM25Coal_Fired_Power_PlantsDataLoader(k_support, k_query, split="test")
+    # traindata = Covid_19economic_DataLoader(k_support, k_query, split="train")
+    # valdata = Covid_19economic_DataLoader(k_support, k_query, split="valid")
+    # testdata = Covid_19economic_DataLoader(k_support, k_query, split="test")
 
     # # Holdout errors
     # valid_batches = [valdata_meta.sample() for _ in range(holdout_size)]
@@ -205,19 +204,52 @@ def main(
     #     torch.tensor(0.0).to(device), torch.tensor(1.0).to(device)
     # )
     # kernel = BochnerKernel(latent_d, latent_dist, pf_map, device=device)
-    # model = RidgeRegression(np.log(lam), kernel).to(device)
+    # model = SupportVectorMachine(np.log(lam), kernel).to(device)
     # opt = optim.Adam(model.parameters(), meta_lr)
+    # parameters = model.parameters()
+    # print("parameters are {}".format(model.parameters()))
 
     # loss = nn.MSELoss("mean")
 
     # # Keep best model around
     # best_val_iteration = 0
     # best_val_mse = np.inf
+    # traindata_ = [None for _ in range(6)]
+    # traindata_[0] = GasSensorDataLoader(k_support, k_query, split="train", t='True')
+    # traindata_[1] = ethyleneCOLoader(k_support, k_query, split="train")
+    # traindata_[2] = BKBWaterQualityDataLoader(k_support, k_query, split="train")
+    # traindata_[3] = AirQualityDataLoader(k_support, k_query, split="train")
+    # traindata_[4] = Covid_19economic_DataLoader(k_support, k_query, split="train")
+    # traindata_[5] = AssessingPM25DataLoader(k_support, k_query, split="train")
 
+    # def random_data_choice():
+    #     nonlocal traindata_
+    #     cur = random.random()
+    #     if cur < 0.16:
+    #         return traindata_[0].sample()
+    #     elif cur < 0.32:
+    #         return traindata_[1].sample()
+    #     elif cur < 0.48:
+    #         return traindata_[2].sample()
+    #     elif cur < 0.64:
+    #         return traindata_[3].sample()
+    #     elif cur < 0.8:
+    #         return traindata_[4].sample()
+    #     else:
+    #         return traindata_[5].sample()
+
+
+    # # Dump frequencies
+    # kernel.sample_features(10000)
+    # sample = kernel.omegas.cpu().detach().numpy()
+    # with open("omegas-init.npy", "wb") as f:
+    #     np.save(f, sample)
+    # torch.backends.cudnn.benchmark = True
     # for iteration in tqdm(range(num_iterations), desc="training"):
     #     validate = True if iteration % meta_val_every == 0 else False
-
-    #     train_batches = [traindata.sample() for _ in range(meta_batch_size)]
+    #     # NOTE traindata.sample()
+    #     # NOTE {"train": train_data, "valid": valid_data, "full": full_data}
+    #     train_batches = [random_data_choice() for _ in range(meta_batch_size)]
     #     opt.zero_grad()
     #     meta_train_error = 0.0
     #     meta_valid_error = 0.0
@@ -238,9 +270,8 @@ def main(
     #         cur = loss(y_val, y_hat)
     #         cur.backward()
     #         meta_train_error += cur.item()
-
-
-    #     def _fast_adapt_boch_valid(batch, model, loss, D, device):
+        
+    #     def _fast_adapt_boch_valid(batch, model, D, device):
     #         nonlocal meta_valid_error
     #         # Unpack data
     #         X_tr, y_tr = batch["train"]
@@ -255,38 +286,36 @@ def main(
     #         # Predict
     #         y_hat = model.predict(X_val)
     #         meta_valid_error += torch.norm(y_hat - y_val).to('cpu').detach().numpy().copy() ** 2
-    #     future_list = []
+    #         # cur = loss(y_val, y_hat)
+    #         # cur.backward()
+    #         # meta_valid_error += cur.item()
     #     with futures.ThreadPoolExecutor() as executor:
     #         for train_batch in train_batches:
     #             # タスクを追加する。
     #             executor.submit(_fast_adapt_boch_train, train_batch, model, loss, D, device)
-                
-    #     # for future in futures:
-    #     #     future.result.backward()
-    #     #     meta_train_error += future.result.item()
     #     if validate:
     #         val_batches = [valdata_meta.sample() for _ in range(meta_val_batch_size)]
+    #         torch.save(model.state_dict(), "model.pth")
+    #         # 保存したモデルを読み込む。
+    #         tmp = SupportVectorMachine(np.log(lam), kernel).to(device)
+    #         tmp.load_state_dict(torch.load("model.pth"))
     #         with futures.ThreadPoolExecutor() as executor:
-    #             torch.save(model.state_dict(), "model.pth")
-    #             # 保存したモデルを読み込む。
-    #             tmp = RidgeRegression(np.log(lam), kernel).to(device)
-    #             tmp.load_state_dict(torch.load("model.pth"))
     #             for val_batch in val_batches:
-    #                 executor.submit(_fast_adapt_boch_valid, val_batch, tmp, loss, D, device)
+    #                 # タスクを追加する。
+    #                 executor.submit(_fast_adapt_boch_valid, val_batch, tmp, D, device)
     #                 # X_tr, y_tr = val_batch["train"]
+    #                 # # print(X_tr.size(), y_tr.size())
     #                 # X_tr = X_tr.to(device).float()
     #                 # y_tr = y_tr.to(device).float()
     #                 # X_val, y_val = val_batch["valid"]
     #                 # X_val = X_val.to(device).float()
     #                 # y_val = y_val.to(device).float()
-    #                 # print(X_tr.size(), y_tr.size())
     #                 # # adapt algorithm
     #                 # tmp.kernel.sample_features(D)
     #                 # tmp.fit(X_tr, y_tr)
     #                 # # Predict
     #                 # y_hat = tmp.predict(X_val)
     #                 # meta_valid_error += torch.norm(y_hat - y_val).to('cpu').detach().numpy().copy()
-            
     #         meta_valid_error /= meta_val_batch_size
     #         result["meta_valid_error"].append(meta_valid_error)
     #         print("Iteration {}".format(iteration))
@@ -296,13 +325,16 @@ def main(
     #             best_val_mse = meta_valid_error
     #             best_state_dict = model.state_dict()
 
+    #         kernel.sample_features(10000)
+    #         sample = kernel.omegas.cpu().detach().numpy()
+    #         with open("omegas-step{}.npy".format(iteration), "wb") as f:
+    #             np.save(f, sample)
+
     #     meta_train_error /= meta_batch_size
     #     result["meta_train_error"].append(meta_train_error)
     #     # Average the accumulated gradients and optimize
     #     for p in model.parameters():
-    #         print(p.grad)
-    #         if p.grad is not None:
-    #             p.grad.data.mul_(1.0 / meta_batch_size)
+    #         p.grad.data.mul_(1.0 / meta_batch_size)
     #     opt.step()
 
     # # Load best model
@@ -312,7 +344,7 @@ def main(
 
     # meta_valid_error = 0.0
     # meta_test_error = 0.0
-    # for (valid_batch, test_batch) in tqdm(zip(valid_batches, test_batches), desc="training, validation"):
+    # for (valid_batch, test_batch) in tqdm(zip(valid_batches, test_batches), desc="validation, test"):
     #     evaluation_error = fast_adapt_boch(
     #         batch=valid_batch,
     #         model=model,
@@ -346,27 +378,31 @@ def main(
     # fig.savefig("learning_curves.pdf", bbox_inches="tight")
     # fig.savefig("learning_curves.png", bbox_inches="tight")
 
-
+    # kernel.sample_features(10000)
+    # sample = kernel.omegas.cpu().detach().numpy()
+    # with open("omegas-final.npy".format(iteration), "wb") as f:
+    #     np.save(f, sample)
     nonlinearity = get_nonlinearity(nonlinearity)
+
     def objective(trial):
         nonlocal seed
         nonlocal k_support
         nonlocal k_query
-        num_iterations = 300
+        nonlocal num_iterations
+        # num_iterations = 300
         nonlocal meta_batch_size
         nonlocal meta_val_batch_size
-        meta_val_every = 25
+        nonlocal meta_val_every
+        # meta_val_every = 25
         nonlocal holdout_size
-        # nonlocal num_layers
-        # nonlocal latent_d
+        nonlocal num_layers
+        nonlocal latent_d
         nonlocal D
-        # nonlocal hidden_dim
+        nonlocal hidden_dim
         nonlocal nonlinearity
-        meta_lr = trial.suggest_float("meta_lr", 0.00001, 1)
-        lam = trial.suggest_float("lam", 0.001, 1)
-        latent_d = trial.suggest_int("latent_d", 1, 128)
-        hidden_dim = trial.suggest_int("hidden_dim", 1, 128)
-        num_layers = trial.suggest_int("num_layers", 1, 10)
+        nonlocal meta_lr
+        # meta_lr = trial.suggest_float("meta_lr", 0.00001, 1)
+        lam = trial.suggest_float("lam", 0.00001, 1)
         result = OrderedDict(
             meta_train_error=[],
             meta_valid_error=[],
@@ -380,12 +416,12 @@ def main(
         set_seed(seed, False)
 
         # Load train/validation/test data
-        traindata = AirQualityDataLoader(k_support, k_query, split="train")
-        valdata = AirQualityDataLoader(k_support, k_query, split="valid")
-        testdata = AirQualityDataLoader(k_support, k_query, split="test")
-        traindata_meta = ethyleneCOLoader(k_support, k_query, split="train")
-        valdata_meta = ethyleneCOLoader(k_support, k_query, split="test")
-        testdata_meta = ethyleneCOLoader(k_support, k_query, split="test")
+        traindata_meta = PM25Coal_Fired_Power_PlantsDataLoader(k_support, k_query, split="train")
+        valdata_meta = PM25Coal_Fired_Power_PlantsDataLoader(k_support, k_query, split="valid")
+        testdata_meta = PM25Coal_Fired_Power_PlantsDataLoader(k_support, k_query, split="test")
+        traindata = Covid_19economic_DataLoader(k_support, k_query, split="train")
+        valdata = Covid_19economic_DataLoader(k_support, k_query, split="valid")
+        testdata = Covid_19economic_DataLoader(k_support, k_query, split="test")
 
         # Holdout errors
         valid_batches = [valdata_meta.sample() for _ in range(holdout_size)]
@@ -401,18 +437,51 @@ def main(
             torch.tensor(0.0).to(device), torch.tensor(1.0).to(device)
         )
         kernel = BochnerKernel(latent_d, latent_dist, pf_map, device=device)
-        model = RidgeRegression(np.log(lam), kernel).to(device)
+        model = SupportVectorMachine(np.log(lam), kernel).to(device)
         opt = optim.Adam(model.parameters(), meta_lr)
+        parameters = model.parameters()
+        print("parameters are {}".format(model.parameters()))
+
         loss = nn.MSELoss("mean")
 
         # Keep best model around
         best_val_iteration = 0
         best_val_mse = np.inf
+        traindata_ = [None for _ in range(6)]
+        traindata_[0] = GasSensorDataLoader(k_support, k_query, split="train", t='True')
+        traindata_[1] = ethyleneCOLoader(k_support, k_query, split="train")
+        traindata_[2] = BKBWaterQualityDataLoader(k_support, k_query, split="train")
+        traindata_[3] = AirQualityDataLoader(k_support, k_query, split="train")
+        traindata_[4] = Covid_19economic_DataLoader(k_support, k_query, split="train")
+        traindata_[5] = AssessingPM25DataLoader(k_support, k_query, split="train")
 
+        def random_data_choice():
+            nonlocal traindata_
+            cur = random.random()
+            if cur < 0.16:
+                return traindata_[0].sample()
+            elif cur < 0.32:
+                return traindata_[1].sample()
+            elif cur < 0.48:
+                return traindata_[2].sample()
+            elif cur < 0.64:
+                return traindata_[3].sample()
+            elif cur < 0.8:
+                return traindata_[4].sample()
+            else:
+                return traindata_[5].sample()
+
+        # Dump frequencies
+        kernel.sample_features(10000)
+        sample = kernel.omegas.cpu().detach().numpy()
+        with open("omegas-init.npy", "wb") as f:
+            np.save(f, sample)
+        torch.backends.cudnn.benchmark = True
         for iteration in tqdm(range(num_iterations), desc="training"):
             validate = True if iteration % meta_val_every == 0 else False
-
-            train_batches = [traindata.sample() for _ in range(meta_batch_size)]
+            # NOTE traindata.sample()
+            # NOTE {"train": train_data, "valid": valid_data, "full": full_data}
+            train_batches = [random_data_choice() for _ in range(meta_batch_size)]
             opt.zero_grad()
             meta_train_error = 0.0
             meta_valid_error = 0.0
@@ -433,9 +502,8 @@ def main(
                 cur = loss(y_val, y_hat)
                 cur.backward()
                 meta_train_error += cur.item()
-
-
-            def _fast_adapt_boch_valid(batch, model, loss, D, device):
+            
+            def _fast_adapt_boch_valid(batch, model, D, device):
                 nonlocal meta_valid_error
                 # Unpack data
                 X_tr, y_tr = batch["train"]
@@ -450,37 +518,37 @@ def main(
                 # Predict
                 y_hat = model.predict(X_val)
                 meta_valid_error += torch.norm(y_hat - y_val).to('cpu').detach().numpy().copy() ** 2
-            future_list = []
+                # cur = loss(y_val, y_hat)
+                # cur.backward()
+                # meta_valid_error += cur.item()
             with futures.ThreadPoolExecutor() as executor:
                 for train_batch in train_batches:
                     # タスクを追加する。
                     executor.submit(_fast_adapt_boch_train, train_batch, model, loss, D, device)
-            # for future in futures:
-            #     future.result.backward()
-            #     meta_train_error += future.result.item()
             if validate:
+                return meta_train_error
                 val_batches = [valdata_meta.sample() for _ in range(meta_val_batch_size)]
+                torch.save(model.state_dict(), "model.pth")
+                # 保存したモデルを読み込む。
+                tmp = SupportVectorMachine(np.log(lam), kernel).to(device)
+                tmp.load_state_dict(torch.load("model.pth"))
                 with futures.ThreadPoolExecutor() as executor:
-                    torch.save(model.state_dict(), "model.pth")
-                    # 保存したモデルを読み込む。
-                    tmp = RidgeRegression(np.log(lam), kernel).to(device)
-                    tmp.load_state_dict(torch.load("model.pth"))
                     for val_batch in val_batches:
-                        executor.submit(_fast_adapt_boch_valid, val_batch, tmp, loss, D, device)
+                        # タスクを追加する。
+                        executor.submit(_fast_adapt_boch_valid, val_batch, tmp, D, device)
                         # X_tr, y_tr = val_batch["train"]
+                        # # print(X_tr.size(), y_tr.size())
                         # X_tr = X_tr.to(device).float()
                         # y_tr = y_tr.to(device).float()
                         # X_val, y_val = val_batch["valid"]
                         # X_val = X_val.to(device).float()
                         # y_val = y_val.to(device).float()
-                        # print(X_tr.size(), y_tr.size())
                         # # adapt algorithm
                         # tmp.kernel.sample_features(D)
                         # tmp.fit(X_tr, y_tr)
                         # # Predict
                         # y_hat = tmp.predict(X_val)
                         # meta_valid_error += torch.norm(y_hat - y_val).to('cpu').detach().numpy().copy()
-
                 meta_valid_error /= meta_val_batch_size
                 result["meta_valid_error"].append(meta_valid_error)
                 print("Iteration {}".format(iteration))
@@ -492,22 +560,27 @@ def main(
                     best_val_mse = meta_valid_error
                     best_state_dict = model.state_dict()
 
+                kernel.sample_features(10000)
+                sample = kernel.omegas.cpu().detach().numpy()
+                with open("omegas-step{}.npy".format(iteration), "wb") as f:
+                    np.save(f, sample)
+
             meta_train_error /= meta_batch_size
             result["meta_train_error"].append(meta_train_error)
             # Average the accumulated gradients and optimize
-            for p in model.parameters():
-                if p.grad is not None:
-                    p.grad.data.mul_(1.0 / meta_batch_size)
-            opt.step()
+            # for p in model.parameters():
+            #     p.grad.data.mul_(1.0 / meta_batch_size)
+            # opt.step()
 
         # Load best model
         print("best_valid_iteration: {}".format(best_val_iteration))
         print("best_valid_mse: {}".format(best_val_mse))
-        model.load_state_dict(best_state_dict)
+        # WARNING コメント解除し忘れ注意
+        # model.load_state_dict(best_state_dict)
 
         meta_valid_error = 0.0
         meta_test_error = 0.0
-        for (valid_batch, test_batch) in tqdm(zip(valid_batches, test_batches), desc="training, validation"):
+        for (valid_batch, test_batch) in tqdm(zip(valid_batches, test_batches), desc="validation, test"):
             evaluation_error = fast_adapt_boch(
                 batch=valid_batch,
                 model=model,
@@ -541,6 +614,11 @@ def main(
         fig.savefig("learning_curves.pdf", bbox_inches="tight")
         fig.savefig("learning_curves.png", bbox_inches="tight")
 
+        kernel.sample_features(10000)
+        sample = kernel.omegas.cpu().detach().numpy()
+        with open("omegas-final.npy".format(iteration), "wb") as f:
+            np.save(f, sample)
+
     study = optuna.create_study()
     study.optimize(objective, n_trials=100)
     trial = study.best_trial
@@ -550,8 +628,8 @@ def main(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--k_support", type=int, default=10)
-    parser.add_argument("--k_query", type=int, default=10)
+    parser.add_argument("--k_support", type=int, default=20)
+    parser.add_argument("--k_query", type=int, default=20)
     parser.add_argument("--num_iterations", type=int, default=10000)
     parser.add_argument("--meta_batch_size", type=int, default=4)
     parser.add_argument("--meta_val_batch_size", type=int, default=100)

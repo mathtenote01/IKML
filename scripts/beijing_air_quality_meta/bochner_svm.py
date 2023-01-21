@@ -197,7 +197,7 @@ def create_mlp(num_layers, hidden_dim, in_dim, out_dim, nonlinearity, batch_norm
     return mlp
 
 
-        
+
 def main(
     seed,
     k_support,
@@ -215,350 +215,350 @@ def main(
     meta_lr,
     lam,
 ):
-    # nonlinearity = get_nonlinearity(nonlinearity)
-    # result = OrderedDict(
-    #     meta_train_error=[],
-    #     meta_valid_error=[],
-    #     holdout_meta_test_error=[],
-    #     holdout_meta_valid_error=[],
-    #     meta_val_every=meta_val_every,
-    #     num_iterations=num_iterations,
-    #     name="Bochner IKML",
-    # )
-    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # set_seed(seed, False)
+    nonlinearity = get_nonlinearity(nonlinearity)
+    result = OrderedDict(
+        meta_train_error=[],
+        meta_valid_error=[],
+        holdout_meta_test_error=[],
+        holdout_meta_valid_error=[],
+        meta_val_every=meta_val_every,
+        num_iterations=num_iterations,
+        name="Bochner IKML",
+    )
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    set_seed(seed, False)
 
-    # # Load train/validation/test data
-    # traindata = AirQualityDataLoader(k_support, k_query, split="train")
-    # valdata = AirQualityDataLoader(k_support, k_query, split="valid")
-    # testdata = AirQualityDataLoader(k_support, k_query, split="test")
-    # traindata_meta = GasSensorDataLoader(k_support, k_query, split="train", t=True)
-    # valdata_meta = GasSensorDataLoader(k_support, k_query, split="valid", t=True)
-    # testdata_meta = GasSensorDataLoader(k_support, k_query, split="test", t=True)
+    # Load train/validation/test data
+    traindata = AirQualityDataLoader(k_support, k_query, split="train")
+    valdata = AirQualityDataLoader(k_support, k_query, split="valid")
+    testdata = AirQualityDataLoader(k_support, k_query, split="test")
+    traindata_meta = GasSensorDataLoader(k_support, k_query, split="train", t=True)
+    valdata_meta = GasSensorDataLoader(k_support, k_query, split="valid", t=True)
+    testdata_meta = GasSensorDataLoader(k_support, k_query, split="test", t=True)
 
-    # # Holdout errors
-    # valid_batches = [valdata_meta.sample() for _ in range(holdout_size)]
-    # test_batches = [testdata_meta.sample() for _ in range(holdout_size)]
+    # Holdout errors
+    valid_batches = [valdata_meta.sample() for _ in range(holdout_size)]
+    test_batches = [testdata_meta.sample() for _ in range(holdout_size)]
 
-    # # Define model
-    # in_dim = latent_d
-    # out_dim = 14
-    # pf_map = create_mlp(
-    #     num_layers, hidden_dim, in_dim, out_dim, nonlinearity, batch_norm=False
-    # )
-    # latent_dist = torch.distributions.Normal(
-    #     torch.tensor(0.0).to(device), torch.tensor(1.0).to(device)
-    # )
-    # kernel = BochnerKernel(latent_d, latent_dist, pf_map, device=device)
-    # model = SupportVectorMachine(np.log(lam), kernel).to(device)
-    # opt = optim.Adam(model.parameters(), meta_lr)
-    # parameters = model.parameters()
-    # for val in parameters:
-    #     print(val)
-    # print("parameters of model are {}".format(model.parameters()))
-    # loss = nn.MSELoss("mean")
+    # Define model
+    in_dim = latent_d
+    out_dim = 14
+    pf_map = create_mlp(
+        num_layers, hidden_dim, in_dim, out_dim, nonlinearity, batch_norm=False
+    )
+    latent_dist = torch.distributions.Normal(
+        torch.tensor(0.0).to(device), torch.tensor(1.0).to(device)
+    )
+    kernel = BochnerKernel(latent_d, latent_dist, pf_map, device=device)
+    model = SupportVectorMachine(np.log(lam), kernel).to(device)
+    opt = optim.Adam(model.parameters(), meta_lr)
+    parameters = model.parameters()
+    for val in parameters:
+        print(val)
+    print("parameters of model are {}".format(model.parameters()))
+    loss = nn.MSELoss("mean")
 
-    # # Keep best model around
-    # best_val_iteration = 0
-    # best_val_mse = np.inf
+    # Keep best model around
+    best_val_iteration = 0
+    best_val_mse = np.inf
 
-    # for iteration in tqdm(range(num_iterations), desc="training"):
-    #     validate = True if iteration % meta_val_every == 0 else False
+    for iteration in tqdm(range(num_iterations), desc="training"):
+        validate = True if iteration % meta_val_every == 0 else False
 
-    #     train_batches = [traindata.sample() for _ in range(meta_batch_size)]
-    #     opt.zero_grad()
-    #     meta_train_error = 0.0
-    #     meta_valid_error = 0.0
-    #     def _fast_adapt_boch_train(batch, model, loss, D, device):
-    #         nonlocal meta_train_error
-    #         # Unpack data
-    #         X_tr, y_tr = batch["train"]
-    #         X_tr = X_tr.to(device).float()
-    #         y_tr = y_tr.to(device).float()
-    #         X_val, y_val = batch["valid"]
-    #         X_val = X_val.to(device).float()
-    #         y_val = y_val.to(device).float()
-    #         # adapt algorithm
-    #         model.kernel.sample_features(D)
-    #         model.fit(X_tr, y_tr)
-    #         # Predict
-    #         y_hat = model.predict(X_val)
-    #         cur = loss(y_val, y_hat)
-    #         cur.backward()
-    #         meta_train_error += cur.item()
+        train_batches = [traindata.sample() for _ in range(meta_batch_size)]
+        opt.zero_grad()
+        meta_train_error = 0.0
+        meta_valid_error = 0.0
+        def _fast_adapt_boch_train(batch, model, loss, D, device):
+            nonlocal meta_train_error
+            # Unpack data
+            X_tr, y_tr = batch["train"]
+            X_tr = X_tr.to(device).float()
+            y_tr = y_tr.to(device).float()
+            X_val, y_val = batch["valid"]
+            X_val = X_val.to(device).float()
+            y_val = y_val.to(device).float()
+            # adapt algorithm
+            model.kernel.sample_features(D)
+            model.fit(X_tr, y_tr)
+            # Predict
+            y_hat = model.predict(X_val)
+            cur = loss(y_val, y_hat)
+            cur.backward()
+            meta_train_error += cur.item()
         
-    #     def _fast_adapt_boch_valid(batch, model, loss, D, device):
-    #         nonlocal meta_valid_error
-    #         # Unpack data
-    #         X_tr, y_tr = batch["train"]
-    #         X_tr = X_tr.to(device).float()
-    #         y_tr = y_tr.to(device).float()
-    #         X_val, y_val = batch["valid"]
-    #         X_val = X_val.to(device).float()
-    #         y_val = y_val.to(device).float()
-    #         # adapt algorithm
-    #         model.kernel.sample_features(D)
-    #         model.fit(X_tr, y_tr)
-    #         # Predict
-    #         y_hat = model.predict(X_val)
-    #         meta_valid_error += torch.norm(y_hat - y_val).to('cpu').detach().numpy().copy() ** 2
-    #     with futures.ThreadPoolExecutor() as executor:
-    #         for train_batch in train_batches:
-    #             # タスクを追加する。
-    #             executor.submit(_fast_adapt_boch_train, train_batch, model, loss, D, device)
-    #     if validate:
-    #         val_batches = [valdata_meta.sample() for _ in range(meta_val_batch_size)]
-    #         torch.save(model.state_dict(), "model.pth")
-    #         # 保存したモデルを読み込む。
-    #         tmp = SupportVectorMachine(np.log(lam), kernel).to(device)
-    #         tmp.load_state_dict(torch.load("model.pth"))
-    #         with futures.ThreadPoolExecutor() as executor:
-    #             for val_batch in val_batches:
-    #                 # タスクを追加する。
-    #                 executor.submit(_fast_adapt_boch_valid, val_batch, tmp, loss, D, device)
-    #         meta_valid_error /= meta_val_batch_size
-    #         result["meta_valid_error"].append(meta_valid_error)
-    #         print("Iteration {}".format(iteration))
-    #         print("meta_valid_error: {}".format(meta_valid_error))
-    #         if meta_valid_error < best_val_mse:
-    #             best_val_iteration = iteration
-    #             best_val_mse = meta_valid_error
-    #             best_state_dict = model.state_dict()
+        def _fast_adapt_boch_valid(batch, model, loss, D, device):
+            nonlocal meta_valid_error
+            # Unpack data
+            X_tr, y_tr = batch["train"]
+            X_tr = X_tr.to(device).float()
+            y_tr = y_tr.to(device).float()
+            X_val, y_val = batch["valid"]
+            X_val = X_val.to(device).float()
+            y_val = y_val.to(device).float()
+            # adapt algorithm
+            model.kernel.sample_features(D)
+            model.fit(X_tr, y_tr)
+            # Predict
+            y_hat = model.predict(X_val)
+            meta_valid_error += torch.norm(y_hat - y_val).to('cpu').detach().numpy().copy() ** 2
+        with futures.ThreadPoolExecutor() as executor:
+            for train_batch in train_batches:
+                # タスクを追加する。
+                executor.submit(_fast_adapt_boch_train, train_batch, model, loss, D, device)
+        if validate:
+            val_batches = [valdata_meta.sample() for _ in range(meta_val_batch_size)]
+            torch.save(model.state_dict(), "model.pth")
+            # 保存したモデルを読み込む。
+            tmp = SupportVectorMachine(np.log(lam), kernel).to(device)
+            tmp.load_state_dict(torch.load("model.pth"))
+            with futures.ThreadPoolExecutor() as executor:
+                for val_batch in val_batches:
+                    # タスクを追加する。
+                    executor.submit(_fast_adapt_boch_valid, val_batch, tmp, loss, D, device)
+            meta_valid_error /= meta_val_batch_size
+            result["meta_valid_error"].append(meta_valid_error)
+            print("Iteration {}".format(iteration))
+            print("meta_valid_error: {}".format(meta_valid_error))
+            if meta_valid_error < best_val_mse:
+                best_val_iteration = iteration
+                best_val_mse = meta_valid_error
+                best_state_dict = model.state_dict()
 
-    #     meta_train_error /= meta_batch_size
-    #     result["meta_train_error"].append(meta_train_error)
-    #     # Average the accumulated gradients and optimize
-    #     for p in model.parameters():
-    #         p.grad.data.mul_(1.0 / meta_batch_size)
-    #     opt.step()
+        meta_train_error /= meta_batch_size
+        result["meta_train_error"].append(meta_train_error)
+        # Average the accumulated gradients and optimize
+        for p in model.parameters():
+            p.grad.data.mul_(1.0 / meta_batch_size)
+        opt.step()
 
-    # # Load best model
-    # print("best_valid_iteration: {}".format(best_val_iteration))
-    # print("best_valid_mse: {}".format(best_val_mse))
-    # model.load_state_dict(best_state_dict)
+    # Load best model
+    print("best_valid_iteration: {}".format(best_val_iteration))
+    print("best_valid_mse: {}".format(best_val_mse))
+    model.load_state_dict(best_state_dict)
 
-    # meta_valid_error = 0.0
-    # meta_test_error = 0.0
-    # for (valid_batch, test_batch) in tqdm(zip(valid_batches, test_batches), desc="validation, test"):
-    #     evaluation_error = fast_adapt_boch(
-    #         batch=valid_batch,
-    #         model=model,
-    #         loss=loss,
-    #         D=D,
-    #         device=device,
-    #     )
-    #     meta_valid_error += evaluation_error.item()
-    #     evaluation_error = fast_adapt_boch(
-    #         batch=test_batch,
-    #         model=model,
-    #         loss=loss,
-    #         D=D,
-    #         device=device,
-    #     )
-    #     meta_test_error += evaluation_error.item()
+    meta_valid_error = 0.0
+    meta_test_error = 0.0
+    for (valid_batch, test_batch) in tqdm(zip(valid_batches, test_batches), desc="validation, test"):
+        evaluation_error = fast_adapt_boch(
+            batch=valid_batch,
+            model=model,
+            loss=loss,
+            D=D,
+            device=device,
+        )
+        meta_valid_error += evaluation_error.item()
+        evaluation_error = fast_adapt_boch(
+            batch=test_batch,
+            model=model,
+            loss=loss,
+            D=D,
+            device=device,
+        )
+        meta_test_error += evaluation_error.item()
 
-    # meta_valid_error /= holdout_size
-    # meta_test_error /= holdout_size
-    # print("holdout_meta_valid_error: {}".format(meta_valid_error))
-    # print("holdout_meta_test_error: {}".format(meta_test_error))
-    # result["holdout_meta_valid_error"].append(meta_valid_error)
-    # result["holdout_meta_test_error"].append(meta_test_error)
+    meta_valid_error /= holdout_size
+    meta_test_error /= holdout_size
+    print("holdout_meta_valid_error: {}".format(meta_valid_error))
+    print("holdout_meta_test_error: {}".format(meta_test_error))
+    result["holdout_meta_valid_error"].append(meta_valid_error)
+    result["holdout_meta_test_error"].append(meta_test_error)
 
-    # with open("result.pkl", "wb") as f:
-    #     pkl.dump(result, f)
+    with open("result.pkl", "wb") as f:
+        pkl.dump(result, f)
 
-    # # Visualise
-    # fig, ax = visualise_run(result)
-    # plt.tight_layout()
-    # fig.savefig("learning_curves.pdf", bbox_inches="tight")
-    # fig.savefig("learning_curves.png", bbox_inches="tight")
+    # Visualise
+    fig, ax = visualise_run(result)
+    plt.tight_layout()
+    fig.savefig("learning_curves.pdf", bbox_inches="tight")
+    fig.savefig("learning_curves.png", bbox_inches="tight")
     
     ####################################### objective と元々のmainの境界線 #################################################################
     
-    nonlinearity = get_nonlinearity(nonlinearity)
+    # nonlinearity = get_nonlinearity(nonlinearity)
     
-    def objective(trial):
-        # param = {'seed': 42,
-        #         'k_support': 20,
-        #         'k_query': 20,
-        #         'num_iterations': 30000,
-        #         'meta_batch_size': 4,
-        #         'meta_val_batch_size': 1000,
-        #         'meta_val_every': 250,
-        #         'holdout_size': 3000,
-        #         'num_layers': 2,
-        #         'latent_d': 64,
-        #         'D': 20000,
-        #         'hidden_dim': 64,
-        #         'nonlinearity': 'relu',
-        #         'meta_lr': 0.00001,
-        #         'lam': 0.001}
-        nonlocal seed
-        nonlocal k_support
-        nonlocal k_query
-        num_iterations = 300
-        nonlocal meta_batch_size
-        nonlocal meta_val_batch_size
-        meta_val_every = 25
-        nonlocal holdout_size
-        nonlocal num_layers
-        nonlocal latent_d
-        nonlocal D
-        nonlocal hidden_dim
-        nonlocal nonlinearity
-        meta_lr = trial.suggest_float("meta_lr", 0.00001, 1)
-        lam = trial.suggest_float("lam", 0.001, 1)
+    # def objective(trial):
+    #     # param = {'seed': 42,
+    #     #         'k_support': 20,
+    #     #         'k_query': 20,
+    #     #         'num_iterations': 30000,
+    #     #         'meta_batch_size': 4,
+    #     #         'meta_val_batch_size': 1000,
+    #     #         'meta_val_every': 250,
+    #     #         'holdout_size': 3000,
+    #     #         'num_layers': 2,
+    #     #         'latent_d': 64,
+    #     #         'D': 20000,
+    #     #         'hidden_dim': 64,
+    #     #         'nonlinearity': 'relu',
+    #     #         'meta_lr': 0.00001,
+    #     #         'lam': 0.001}
+    #     nonlocal seed
+    #     nonlocal k_support
+    #     nonlocal k_query
+    #     num_iterations = 300
+    #     nonlocal meta_batch_size
+    #     nonlocal meta_val_batch_size
+    #     meta_val_every = 25
+    #     nonlocal holdout_size
+    #     nonlocal num_layers
+    #     nonlocal latent_d
+    #     nonlocal D
+    #     nonlocal hidden_dim
+    #     nonlocal nonlinearity
+    #     meta_lr = trial.suggest_float("meta_lr", 0.00001, 1)
+    #     lam = trial.suggest_float("lam", 0.001, 1)
 
         
-        result = OrderedDict(
-            meta_train_error=[],
-            meta_valid_error=[],
-            holdout_meta_test_error=[],
-            holdout_meta_valid_error=[],
-            meta_val_every=meta_val_every,
-            num_iterations=num_iterations,
-            name="Bochner IKML",
-        )
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        set_seed(seed, False)
+    #     result = OrderedDict(
+    #         meta_train_error=[],
+    #         meta_valid_error=[],
+    #         holdout_meta_test_error=[],
+    #         holdout_meta_valid_error=[],
+    #         meta_val_every=meta_val_every,
+    #         num_iterations=num_iterations,
+    #         name="Bochner IKML",
+    #     )
+    #     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    #     set_seed(seed, False)
 
-        # Load train/validation/test data
-        traindata = AirQualityDataLoader(k_support, k_query, split="train")
-        valdata = AirQualityDataLoader(k_support, k_query, split="valid")
-        testdata = AirQualityDataLoader(k_support, k_query, split="test")
-        traindata_meta = GasSensorDataLoader(k_support, k_query, split="train", t=True)
-        valdata_meta = GasSensorDataLoader(k_support, k_query, split="test", t=True)
-        testdata_meta = GasSensorDataLoader(k_support, k_query, split="test", t=True)
+    #     # Load train/validation/test data
+    #     traindata = AirQualityDataLoader(k_support, k_query, split="train")
+    #     valdata = AirQualityDataLoader(k_support, k_query, split="valid")
+    #     testdata = AirQualityDataLoader(k_support, k_query, split="test")
+    #     traindata_meta = GasSensorDataLoader(k_support, k_query, split="train", t=True)
+    #     valdata_meta = GasSensorDataLoader(k_support, k_query, split="test", t=True)
+    #     testdata_meta = GasSensorDataLoader(k_support, k_query, split="test", t=True)
 
-        # Holdout errors
-        valid_batches = [valdata_meta.sample() for _ in range(holdout_size)]
-        test_batches = [testdata_meta.sample() for _ in range(holdout_size)]
+    #     # Holdout errors
+    #     valid_batches = [valdata_meta.sample() for _ in range(holdout_size)]
+    #     test_batches = [testdata_meta.sample() for _ in range(holdout_size)]
 
-        # Define model
-        in_dim = latent_d
-        out_dim = 14
-        pf_map = create_mlp(
-            num_layers, hidden_dim, in_dim, out_dim, nonlinearity, batch_norm=False
-        )
-        latent_dist = torch.distributions.Normal(
-            torch.tensor(0.0).to(device), torch.tensor(1.0).to(device)
-        )
-        kernel = BochnerKernel(latent_d, latent_dist, pf_map, device=device)
-        model = SupportVectorMachine(np.log(lam), kernel).to(device)
-        opt = optim.Adam(model.parameters(), meta_lr)
-        # parameters = model.parameters()
-        # for val in parameters:
-        #     print(val)
-        # print("parameters of model are {}".format(model.parameters()))
-        loss = nn.MSELoss("mean")
+    #     # Define model
+    #     in_dim = latent_d
+    #     out_dim = 14
+    #     pf_map = create_mlp(
+    #         num_layers, hidden_dim, in_dim, out_dim, nonlinearity, batch_norm=False
+    #     )
+    #     latent_dist = torch.distributions.Normal(
+    #         torch.tensor(0.0).to(device), torch.tensor(1.0).to(device)
+    #     )
+    #     kernel = BochnerKernel(latent_d, latent_dist, pf_map, device=device)
+    #     model = SupportVectorMachine(np.log(lam), kernel).to(device)
+    #     opt = optim.Adam(model.parameters(), meta_lr)
+    #     # parameters = model.parameters()
+    #     # for val in parameters:
+    #     #     print(val)
+    #     # print("parameters of model are {}".format(model.parameters()))
+    #     loss = nn.MSELoss("mean")
 
-        # Keep best model around
-        best_val_iteration = 0
-        best_val_mse = np.inf
+    #     # Keep best model around
+    #     best_val_iteration = 0
+    #     best_val_mse = np.inf
 
-        for iteration in tqdm(range(num_iterations), desc="training"):
-            validate = True if iteration % meta_val_every == 0 else False
+    #     for iteration in tqdm(range(num_iterations), desc="training"):
+    #         validate = True if iteration % meta_val_every == 0 else False
 
-            train_batches = [traindata.sample() for _ in range(meta_batch_size)]
-            opt.zero_grad()
-            meta_train_error = 0.0
-            meta_valid_error = 0.0
-            def _fast_adapt_boch_train(batch, model, loss, D, device):
-                nonlocal meta_train_error
-                # Unpack data
-                X_tr, y_tr = batch["train"]
-                X_tr = X_tr.to(device).float()
-                y_tr = y_tr.to(device).float()
-                X_val, y_val = batch["valid"]
-                X_val = X_val.to(device).float()
-                y_val = y_val.to(device).float()
-                # adapt algorithm
-                model.kernel.sample_features(D)
-                model.fit(X_tr, y_tr)
-                # Predict
-                y_hat = model.predict(X_val)
-                cur = loss(y_val, y_hat)
-                cur.backward()
-                meta_train_error += cur.item()
+    #         train_batches = [traindata.sample() for _ in range(meta_batch_size)]
+    #         opt.zero_grad()
+    #         meta_train_error = 0.0
+    #         meta_valid_error = 0.0
+    #         def _fast_adapt_boch_train(batch, model, loss, D, device):
+    #             nonlocal meta_train_error
+    #             # Unpack data
+    #             X_tr, y_tr = batch["train"]
+    #             X_tr = X_tr.to(device).float()
+    #             y_tr = y_tr.to(device).float()
+    #             X_val, y_val = batch["valid"]
+    #             X_val = X_val.to(device).float()
+    #             y_val = y_val.to(device).float()
+    #             # adapt algorithm
+    #             model.kernel.sample_features(D)
+    #             model.fit(X_tr, y_tr)
+    #             # Predict
+    #             y_hat = model.predict(X_val)
+    #             cur = loss(y_val, y_hat)
+    #             cur.backward()
+    #             meta_train_error += cur.item()
 
-            def _fast_adapt_boch_valid(batch, model, loss, D, device):
-                nonlocal meta_valid_error
-                # Unpack data
-                X_tr, y_tr = batch["train"]
-                X_tr = X_tr.to(device).float()
-                y_tr = y_tr.to(device).float()
-                X_val, y_val = batch["valid"]
-                X_val = X_val.to(device).float()
-                y_val = y_val.to(device).float()
-                # adapt algorithm
-                model.kernel.sample_features(D)
-                model.fit(X_tr, y_tr)
-                # Predict
-                y_hat = model.predict(X_val)
-                meta_valid_error += torch.norm(y_hat - y_val).to('cpu').detach().numpy().copy() ** 2
-            with futures.ThreadPoolExecutor() as executor:
-                for train_batch in train_batches:
-                    # タスクを追加する。
-                    executor.submit(_fast_adapt_boch_train, train_batch, model, loss, D, device)
-            if validate:
-                val_batches = [valdata_meta.sample() for _ in range(meta_val_batch_size)]
-                torch.save(model.state_dict(), "model.pth")
-                # 保存したモデルを読み込む。
-                tmp = SupportVectorMachine(np.log(lam), kernel).to(device)
-                tmp.load_state_dict(torch.load("model.pth"))
-                with futures.ThreadPoolExecutor() as executor:
-                    for val_batch in val_batches:
-                        # タスクを追加する。
-                        executor.submit(_fast_adapt_boch_valid, val_batch, tmp, loss, D, device)
-                meta_valid_error /= meta_val_batch_size
-                result["meta_valid_error"].append(meta_valid_error)
-                print("Iteration {}".format(iteration))
-                print("meta_valid_error: {}".format(meta_valid_error))
-                if iteration == num_iterations - meta_val_every:
-                    return meta_valid_error
-                if meta_valid_error < best_val_mse:
-                    best_val_iteration = iteration
-                    best_val_mse = meta_valid_error
-                    best_state_dict = model.state_dict()
+    #         def _fast_adapt_boch_valid(batch, model, loss, D, device):
+    #             nonlocal meta_valid_error
+    #             # Unpack data
+    #             X_tr, y_tr = batch["train"]
+    #             X_tr = X_tr.to(device).float()
+    #             y_tr = y_tr.to(device).float()
+    #             X_val, y_val = batch["valid"]
+    #             X_val = X_val.to(device).float()
+    #             y_val = y_val.to(device).float()
+    #             # adapt algorithm
+    #             model.kernel.sample_features(D)
+    #             model.fit(X_tr, y_tr)
+    #             # Predict
+    #             y_hat = model.predict(X_val)
+    #             meta_valid_error += torch.norm(y_hat - y_val).to('cpu').detach().numpy().copy() ** 2
+    #         with futures.ThreadPoolExecutor() as executor:
+    #             for train_batch in train_batches:
+    #                 # タスクを追加する。
+    #                 executor.submit(_fast_adapt_boch_train, train_batch, model, loss, D, device)
+    #         if validate:
+    #             val_batches = [valdata_meta.sample() for _ in range(meta_val_batch_size)]
+    #             torch.save(model.state_dict(), "model.pth")
+    #             # 保存したモデルを読み込む。
+    #             tmp = SupportVectorMachine(np.log(lam), kernel).to(device)
+    #             tmp.load_state_dict(torch.load("model.pth"))
+    #             with futures.ThreadPoolExecutor() as executor:
+    #                 for val_batch in val_batches:
+    #                     # タスクを追加する。
+    #                     executor.submit(_fast_adapt_boch_valid, val_batch, tmp, loss, D, device)
+    #             meta_valid_error /= meta_val_batch_size
+    #             result["meta_valid_error"].append(meta_valid_error)
+    #             print("Iteration {}".format(iteration))
+    #             print("meta_valid_error: {}".format(meta_valid_error))
+    #             if iteration == num_iterations - meta_val_every:
+    #                 return meta_valid_error
+    #             if meta_valid_error < best_val_mse:
+    #                 best_val_iteration = iteration
+    #                 best_val_mse = meta_valid_error
+    #                 best_state_dict = model.state_dict()
 
-            meta_train_error /= meta_batch_size
-            result["meta_train_error"].append(meta_train_error)
-            # Average the accumulated gradients and optimize
-            for p in model.parameters():
-                p.grad.data.mul_(1.0 / meta_batch_size)
-            opt.step()
-        # Load best model
-        print("best_valid_iteration: {}".format(best_val_iteration))
-        print("best_valid_mse: {}".format(best_val_mse))
-        model.load_state_dict(best_state_dict)
+    #         meta_train_error /= meta_batch_size
+    #         result["meta_train_error"].append(meta_train_error)
+    #         # Average the accumulated gradients and optimize
+    #         for p in model.parameters():
+    #             p.grad.data.mul_(1.0 / meta_batch_size)
+    #         opt.step()
+    #     # Load best model
+    #     print("best_valid_iteration: {}".format(best_val_iteration))
+    #     print("best_valid_mse: {}".format(best_val_mse))
+    #     model.load_state_dict(best_state_dict)
 
-        meta_valid_error = 0.0
-        meta_test_error = 0.0
-        for (valid_batch, test_batch) in tqdm(zip(valid_batches, test_batches), desc="validation, test"):
-            evaluation_error = fast_adapt_boch(
-                batch=valid_batch,
-                model=model,
-                loss=loss,
-                D=D,
-                device=device,
-            )
-            meta_valid_error += evaluation_error.item()
-            evaluation_error = fast_adapt_boch(
-                batch=test_batch,
-                model=model,
-                loss=loss,
-                D=D,
-                device=device,
-            )
-            meta_test_error += evaluation_error.item()
+    #     meta_valid_error = 0.0
+    #     meta_test_error = 0.0
+    #     for (valid_batch, test_batch) in tqdm(zip(valid_batches, test_batches), desc="validation, test"):
+    #         evaluation_error = fast_adapt_boch(
+    #             batch=valid_batch,
+    #             model=model,
+    #             loss=loss,
+    #             D=D,
+    #             device=device,
+    #         )
+    #         meta_valid_error += evaluation_error.item()
+    #         evaluation_error = fast_adapt_boch(
+    #             batch=test_batch,
+    #             model=model,
+    #             loss=loss,
+    #             D=D,
+    #             device=device,
+    #         )
+    #         meta_test_error += evaluation_error.item()
 
-        meta_valid_error /= holdout_size
-        meta_test_error /= holdout_size
+    #     meta_valid_error /= holdout_size
+    #     meta_test_error /= holdout_size
 
-    study = optuna.create_study()
-    study.optimize(objective, n_trials=100)
-    trial = study.best_trial
-    print('  Value: {}'.format(trial.value))
+    # study = optuna.create_study()
+    # study.optimize(objective, n_trials=100)
+    # trial = study.best_trial
+    # print('  Value: {}'.format(trial.value))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

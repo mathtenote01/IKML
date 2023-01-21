@@ -56,7 +56,7 @@ def make_ts(results, col):
 
 # Get learning curves
 palette = sns.color_palette()
-figsize = (8, 6)
+figsize = (10, 12)
 
 
 class ExperimentColormap(Enum):
@@ -123,7 +123,7 @@ def main(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     fig, ax = plt.subplots(figsize=figsize)
-    
+
     if mkl_id:
         mkl_good_ids = load_ids_from_batch(mkl_id)
         mkl_good_results = []
@@ -248,7 +248,7 @@ def main(
             alpha=alpha,
             alpha_fill=alpha_fill,
             lw=lw,
-            label="IKML",
+            label="KRR",
         )
 
     if gauss_oracle_id:
@@ -286,7 +286,7 @@ def main(
             alpha=alpha,
             alpha_fill=alpha_fill,
             lw=lw,
-            label="IKML_svm",
+            label="KSVM",
         )
     
     if bochner_gauss_id:
@@ -309,12 +309,12 @@ def main(
             lw=lw,
             label="IKML_gauss",
         )
-
+    fig.suptitle('generalization error\n KRR, KSVM : U.S. air quality\n kernel : Dissolved oxygen in water')
     leg = ax.legend()
     for line in leg.get_lines():
         line.set_linewidth(4.0)
     ax.set_ylim((y_lower_lim, y_upper_lim))
-    ax.set_ylabel("RMSE(validation_error)")
+    ax.set_ylabel("RMSE(generalization error)")
     ax.set_xlabel("Iteration")
     fig.savefig(output_dir / "learning_curves_valid.pdf", format="pdf")
     fig.savefig(output_dir / "learning_curves_valid.png", format="png")

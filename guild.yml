@@ -354,6 +354,29 @@
         D: 20000
         lam: 0.001
         meta_lr: 0.0001
+    
+    svm:
+      description: "svm"
+      main: "scripts/beijing_air_quality_meta/svm"
+      output-scalars: '(\key): (\value)'
+      sourcecode: "scripts/beijing_air_quality_meta"
+      flags-dest: args
+      flags:
+        seed: 42
+        k_support: 25
+        k_query: 25
+        num_iterations: 10000
+        meta_batch_size: 4
+        meta_val_batch_size: 1000
+        meta_val_every: 250
+        holdout_size: 3000
+        num_layers: 3
+        hidden_dim: 64
+        nonlinearity: relu
+        latent_d: 64
+        D: 20000
+        lam: 0.001
+        meta_lr: 0.0001
     bochner_ikml_gauss:
       description: "Bochner IKML"
       main: "scripts/beijing_air_quality_meta/bochner_gauss"
@@ -497,7 +520,7 @@
         seed: 42
         k_support: 20
         k_query: 20
-        num_iterations: 30000
+        num_iterations: 10000
         meta_batch_size: 4
         meta_val_batch_size: 1000
         meta_val_every: 250
@@ -519,7 +542,7 @@
         seed: 42
         k_support: 20
         k_query: 20
-        num_iterations: 30000
+        num_iterations: 10000
         meta_batch_size: 4
         meta_val_batch_size: 1000
         meta_val_every: 250
@@ -531,6 +554,7 @@
         D: 20000
         lam: 0.001
         meta_lr: 0.00001
+    
 
 
 
@@ -549,7 +573,7 @@
         seed: 42
         k_support: 20
         k_query: 20
-        num_iterations: 30000
+        num_iterations: 10000
         meta_batch_size: 4
         meta_val_batch_size: 1000
         meta_val_every: 250
@@ -569,7 +593,7 @@
         seed: 42
         k_support: 20
         k_query: 20
-        num_iterations: 30000
+        num_iterations: 10000
         meta_batch_size: 4
         meta_val_batch_size: 1000
         meta_val_every: 250
@@ -656,7 +680,7 @@
         seed: 42
         k_support: 20
         k_query: 20
-        num_iterations: 30000
+        num_iterations: 10000
         meta_batch_size: 4
         meta_val_batch_size: 1000
         meta_val_every: 250
@@ -678,7 +702,7 @@
         seed: 42
         k_support: 20
         k_query: 20
-        num_iterations: 30000
+        num_iterations: 10000
         meta_batch_size: 4
         meta_val_batch_size: 1000
         meta_val_every: 250
@@ -700,7 +724,29 @@
         seed: 42
         k_support: 40
         k_query: 20
-        num_iterations: 30000
+        num_iterations: 10000
+        meta_batch_size: 4
+        meta_val_batch_size: 1000
+        meta_val_every: 250
+        holdout_size: 3000
+        num_layers: 2
+        hidden_dim: 64
+        nonlinearity: relu
+        latent_d: 64
+        D: 20000
+        lam: 0.001
+        meta_lr: 0.00001
+    svm:
+      description: "svm"
+      main: "scripts/gas_sensor_meta/svm"
+      output-scalars: '(\key): (\value)'
+      sourcecode: "scripts/gas_sensor_meta"
+      flags-dest: args
+      flags:
+        seed: 42
+        k_support: 20
+        k_query: 20
+        num_iterations: 10000
         meta_batch_size: 4
         meta_val_batch_size: 1000
         meta_val_every: 250
@@ -910,14 +956,112 @@
         meta_lr: 0.0001
 
 
-- model: CO_meta
+# - model: CO_meta
+#   description: "Predict Beijing Air Quality ppm using the rest of the covariates"
+#   operations:
+#     bochner_ikml:
+#       description: "Bochner IKML"
+#       main: "scripts/CO_meta/bochner"
+#       output-scalars: '(\key): (\value)'
+#       sourcecode: "scripts/CO_meta"
+#       flags-dest: args
+#       flags:
+#         seed: 42
+#         k_support: 25
+#         k_query: 25
+#         num_iterations: 10000
+#         meta_batch_size: 4
+#         meta_val_batch_size: 1000
+#         meta_val_every: 250
+#         holdout_size: 300
+#         num_layers: 3
+#         hidden_dim: 64
+#         nonlinearity: relu
+#         latent_d: 64
+#         D: 20000
+#         lam: 0.001
+#         meta_lr: 0.0001
+#     bochner_ikml_svm:
+#       description: "Bochner IKML SVM"
+#       main: "scripts/CO_meta/bochner_svm"
+#       output-scalars: '(\key): (\value)'
+#       sourcecode: "scripts/CO_meta"
+#       flags-dest: args
+#       flags:
+#         seed: 42
+#         k_support: 25
+#         k_query: 25
+#         num_iterations: 10000
+#         meta_batch_size: 4
+#         meta_val_batch_size: 1000
+#         meta_val_every: 250
+#         holdout_size: 3000
+#         num_layers: 3
+#         hidden_dim: 64
+#         nonlinearity: relu
+#         latent_d: 64
+#         D: 20000
+#         lam: 0.001
+#         meta_lr: 0.0001
+
+
+- model: CO_reverse_meta
   description: "Predict Beijing Air Quality ppm using the rest of the covariates"
   operations:
     bochner_ikml:
       description: "Bochner IKML"
-      main: "scripts/CO_meta/bochner"
+      main: "scripts/CO_reverse_meta/bochner"
       output-scalars: '(\key): (\value)'
-      sourcecode: "scripts/CO_meta"
+      sourcecode: "scripts/CO_reverse_meta"
+      flags-dest: args
+      flags:
+        seed: 42
+        k_support: 25
+        k_query: 25
+        num_iterations: 10000
+        meta_batch_size: 4
+        meta_val_batch_size: 1000
+        meta_val_every: 250
+        holdout_size: 300
+        num_layers: 3
+        hidden_dim: 64
+        nonlinearity: relu
+        latent_d: 64
+        D: 20000
+        lam: 0.001
+        meta_lr: 0.0001
+    bochner_ikml_svm:
+      description: "Bochner IKML SVM"
+      main: "scripts/CO_reverse_meta/bochner_svm"
+      output-scalars: '(\key): (\value)'
+      sourcecode: "scripts/CO_reverse_meta"
+      flags-dest: args
+      flags:
+        seed: 42
+        k_support: 25
+        k_query: 25
+        num_iterations: 10000
+        meta_batch_size: 4
+        meta_val_batch_size: 100
+        meta_val_every: 250
+        holdout_size: 3000
+        num_layers: 3
+        hidden_dim: 64
+        nonlinearity: relu
+        latent_d: 64
+        D: 20000
+        lam: 0.001
+        meta_lr: 0.0001
+
+
+- model: air_quality_meta_all
+  description: "Predict Beijing Air Quality ppm using the rest of the covariates"
+  operations:
+    bochner_ikml:
+      description: "Bochner IKML"
+      main: "scripts/beijing_air_quality_meta_all/bochner"
+      output-scalars: '(\key): (\value)'
+      sourcecode: "scripts/beijing_air_quality_meta_all"
       flags-dest: args
       flags:
         seed: 42
@@ -937,9 +1081,323 @@
         meta_lr: 0.0001
     bochner_ikml_svm:
       description: "Bochner IKML SVM"
-      main: "scripts/CO_meta/bochner_svm"
+      main: "scripts/beijing_air_quality_meta_all/bochner_svm"
       output-scalars: '(\key): (\value)'
-      sourcecode: "scripts/CO_meta"
+      sourcecode: "scripts/beijing_air_quality_meta_all"
+      flags-dest: args
+      flags:
+        seed: 42
+        k_support: 25
+        k_query: 25
+        num_iterations: 10000
+        meta_batch_size: 4
+        meta_val_batch_size: 1000
+        meta_val_every: 250
+        holdout_size: 3000
+        num_layers: 3
+        hidden_dim: 64
+        nonlinearity: relu
+        latent_d: 64
+        D: 20000
+        lam: 0.001
+        meta_lr: 0.0001
+
+
+- model: gas_sensor_meta_all
+  description: "Forecasting gas concentration"
+  operations:
+    bochner_ikml:
+      description: "Bochner IKML"
+      main: "scripts/gas_sensor_meta_all/bochner"
+      output-scalars: '(\key): (\value)'
+      sourcecode: "scripts/gas_sensor_meta_all"
+      flags-dest: args
+      flags:
+        seed: 42
+        k_support: 20
+        k_query: 20
+        num_iterations: 10000
+        meta_batch_size: 4
+        meta_val_batch_size: 1000
+        meta_val_every: 250
+        holdout_size: 3000
+        num_layers: 2
+        hidden_dim: 64
+        nonlinearity: relu
+        latent_d: 64
+        D: 20000
+        lam: 0.001
+        meta_lr: 0.00001
+    bochner_ikml_svm:
+      description: "Bochner IKML"
+      main: "scripts/gas_sensor_meta_all/bochner_svm"
+      output-scalars: '(\key): (\value)'
+      sourcecode: "scripts/gas_sensor_meta_all"
+      flags-dest: args
+      flags:
+        seed: 42
+        k_support: 20
+        k_query: 20
+        num_iterations: 10000
+        meta_batch_size: 4
+        meta_val_batch_size: 1000
+        meta_val_every: 250
+        holdout_size: 3000
+        num_layers: 2
+        hidden_dim: 64
+        nonlinearity: relu
+        latent_d: 64
+        D: 20000
+        lam: 0.001
+        meta_lr: 0.00001
+    svm:
+      description: "svm"
+      main: "scripts/gas_sensor_meta_all/svm"
+      output-scalars: '(\key): (\value)'
+      sourcecode: "scripts/gas_sensor_meta_all"
+      flags-dest: args
+      flags:
+        seed: 42
+        k_support: 20
+        k_query: 20
+        num_iterations: 10000
+        meta_batch_size: 4
+        meta_val_batch_size: 1000
+        meta_val_every: 250
+        holdout_size: 3000
+        num_layers: 2
+        hidden_dim: 64
+        nonlinearity: relu
+        latent_d: 64
+        D: 20000
+        lam: 0.001
+        meta_lr: 0.00001
+
+
+- model: california_covid19_meta_all
+  description: "Predict california_covid19_meta using the rest of the covariates"
+  operations:
+    bochner_ikml:
+      description: "Bochner IKML"
+      main: "scripts/california_covid19_meta_all/bochner"
+      output-scalars: '(\key): (\value)'
+      sourcecode: "scripts/california_covid19_meta_all"
+      flags-dest: args
+      flags:
+        seed: 42
+        k_support: 25
+        k_query: 25
+        num_iterations: 10000
+        meta_batch_size: 4
+        meta_val_batch_size: 1000
+        meta_val_every: 250
+        holdout_size: 3000
+        num_layers: 3
+        hidden_dim: 64
+        nonlinearity: relu
+        latent_d: 64
+        D: 20000
+        lam: 0.001
+        meta_lr: 0.0001
+    bochner_ikml_svm:
+      description: "Bochner IKML SVM"
+      main: "scripts/california_covid19_meta_all/bochner_svm"
+      output-scalars: '(\key): (\value)'
+      sourcecode: "scripts/california_covid19_meta_all"
+      flags-dest: args
+      flags:
+        seed: 42
+        k_support: 25
+        k_query: 25
+        num_iterations: 10000
+        meta_batch_size: 4
+        meta_val_batch_size: 1000
+        meta_val_every: 250
+        holdout_size: 3000
+        num_layers: 3
+        hidden_dim: 64
+        nonlinearity: relu
+        latent_d: 64
+        D: 20000
+        lam: 0.001
+        meta_lr: 0.0001
+
+
+- model: Coal_fired_plants_meta_all
+  description: "Predict Coal_fired_plants_meta using the rest of the covariates"
+  operations:
+    bochner_ikml:
+      description: "Bochner IKML"
+      main: "scripts/Coal_fired_plants_meta_all/bochner"
+      output-scalars: '(\key): (\value)'
+      sourcecode: "scripts/Coal_fired_plants_meta_all"
+      flags-dest: args
+      flags:
+        seed: 42
+        k_support: 25
+        k_query: 25
+        num_iterations: 10000
+        meta_batch_size: 4
+        meta_val_batch_size: 1000
+        meta_val_every: 250
+        holdout_size: 3000
+        num_layers: 3
+        hidden_dim: 64
+        nonlinearity: relu
+        latent_d: 64
+        D: 20000
+        lam: 0.001
+        meta_lr: 0.0001
+    bochner_ikml_svm:
+      description: "Bochner IKML SVM"
+      main: "scripts/Coal_fired_plants_meta_all/bochner_svm"
+      output-scalars: '(\key): (\value)'
+      sourcecode: "scripts/Coal_fired_plants_meta_all"
+      flags-dest: args
+      flags:
+        seed: 42
+        k_support: 25
+        k_query: 25
+        num_iterations: 10000
+        meta_batch_size: 4
+        meta_val_batch_size: 1000
+        meta_val_every: 250
+        holdout_size: 3000
+        num_layers: 3
+        hidden_dim: 64
+        nonlinearity: relu
+        latent_d: 64
+        D: 20000
+        lam: 0.001
+        meta_lr: 0.0001
+
+
+- model: PM25_meta_all
+  description: "Predict PM25_meta using the rest of the covariates"
+  operations:
+    bochner_ikml:
+      description: "Bochner IKML"
+      main: "scripts/PM25_meta_all/bochner"
+      output-scalars: '(\key): (\value)'
+      sourcecode: "scripts/PM25_meta_all"
+      flags-dest: args
+      flags:
+        seed: 42
+        k_support: 25
+        k_query: 25
+        num_iterations: 10000
+        meta_batch_size: 4
+        meta_val_batch_size: 1000
+        meta_val_every: 250
+        holdout_size: 3000
+        num_layers: 3
+        hidden_dim: 64
+        nonlinearity: relu
+        latent_d: 64
+        D: 20000
+        lam: 0.001
+        meta_lr: 0.0001
+    bochner_ikml_svm:
+      description: "Bochner IKML SVM"
+      main: "scripts/PM25_meta_all/bochner_svm"
+      output-scalars: '(\key): (\value)'
+      sourcecode: "scripts/PM25_meta_all"
+      flags-dest: args
+      flags:
+        seed: 42
+        k_support: 25
+        k_query: 25
+        num_iterations: 10000
+        meta_batch_size: 4
+        meta_val_batch_size: 1000
+        meta_val_every: 250
+        holdout_size: 3000
+        num_layers: 3
+        hidden_dim: 64
+        nonlinearity: relu
+        latent_d: 64
+        D: 20000
+        lam: 0.001
+        meta_lr: 0.0001
+
+- model: BKB_meta_all
+  description: "Predict BKB_meta using the rest of the covariates"
+  operations:
+    bochner_ikml:
+      description: "Bochner IKML"
+      main: "scripts/BKB_meta_all/bochner"
+      output-scalars: '(\key): (\value)'
+      sourcecode: "scripts/BKB_meta_all"
+      flags-dest: args
+      flags:
+        seed: 42
+        k_support: 25
+        k_query: 25
+        num_iterations: 10000
+        meta_batch_size: 4
+        meta_val_batch_size: 1000
+        meta_val_every: 250
+        holdout_size: 3000
+        num_layers: 3
+        hidden_dim: 64
+        nonlinearity: relu
+        latent_d: 64
+        D: 20000
+        lam: 0.001
+        meta_lr: 0.0001
+    bochner_ikml_svm:
+      description: "Bochner IKML SVM"
+      main: "scripts/BKB_meta_all/bochner_svm"
+      output-scalars: '(\key): (\value)'
+      sourcecode: "scripts/BKB_meta_all"
+      flags-dest: args
+      flags:
+        seed: 42
+        k_support: 25
+        k_query: 25
+        num_iterations: 10000
+        meta_batch_size: 4
+        meta_val_batch_size: 1000
+        meta_val_every: 250
+        holdout_size: 3000
+        num_layers: 3
+        hidden_dim: 64
+        nonlinearity: relu
+        latent_d: 64
+        D: 20000
+        lam: 0.001
+        meta_lr: 0.0001
+
+- model: CO_meta_all
+  description: "Predict Beijing Air Quality ppm using the rest of the covariates"
+  operations:
+    bochner_ikml:
+      description: "Bochner IKML"
+      main: "scripts/CO_meta_all/bochner"
+      output-scalars: '(\key): (\value)'
+      sourcecode: "scripts/CO_meta_all"
+      flags-dest: args
+      flags:
+        seed: 42
+        k_support: 25
+        k_query: 25
+        num_iterations: 10000
+        meta_batch_size: 4
+        meta_val_batch_size: 1000
+        meta_val_every: 250
+        holdout_size: 300
+        num_layers: 3
+        hidden_dim: 64
+        nonlinearity: relu
+        latent_d: 64
+        D: 20000
+        lam: 0.001
+        meta_lr: 0.0001
+    bochner_ikml_svm:
+      description: "Bochner IKML SVM"
+      main: "scripts/CO_meta_all/bochner_svm"
+      output-scalars: '(\key): (\value)'
+      sourcecode: "scripts/CO_meta_all"
       flags-dest: args
       flags:
         seed: 42

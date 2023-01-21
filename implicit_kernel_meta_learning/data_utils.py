@@ -46,7 +46,6 @@ class AirQualityDataLoader:
             "zero_three",
             "zero_four",
             "zero_five",
-            "t",
         ]
 
     def _load_split(self):
@@ -262,7 +261,7 @@ class BKBWaterQualityDataLoader:
         self.split = split
         self.forecast = forecast
         self.stations = [
-            "BKB_WaterQualityData_2020084",
+            "BKB_WaterQualityData",
         ]
         self._load_split()
         self.output_col = "Dissolved Oxygen (mg/L)"
@@ -398,7 +397,7 @@ class Covid_19economic_DataLoader:
         self.split = split
         self.forecast = forecast
         self.stations = [
-            "COVID19_california_economic_shutdown",
+            "Covid19_california_economic_shutdown",
         ]
         self._load_split()
         self.output_col = "AOD"
